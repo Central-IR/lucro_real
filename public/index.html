@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucro Real</title>
+    <link rel="icon" type="image/png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-content">
+        <div class="container">
+            <div class="header">
+                <div class="header-left">
+                    <h1>Lucro Real</h1>
+                    <div id="connectionStatus" class="connection-status offline">
+                        <span class="status-dot"></span>
+                    </div>
+                </div>
+                <!-- sem botão novo pedido -->
+            </div>
+
+            <!-- Dashboard Cards -->
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalVenda">R$ 0,00</div>
+                        <div class="stat-label">Venda</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 7h16M4 12h16M4 17h10" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalCusto">R$ 0,00</div>
+                        <div class="stat-label">Custo</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalFrete">R$ 0,00</div>
+                        <div class="stat-label">Frete</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 12H4M12 4v16" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalComissao">R$ 0,00</div>
+                        <div class="stat-label">Comissão</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalImposto">R$ 0,00</div>
+                        <div class="stat-label">Imposto Federal</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar with Filters -->
+            <div class="search-bar-wrapper">
+                <div class="search-bar">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" id="search" placeholder="Pesquisar por NF, vendedor..." oninput="filterLucroReal()">
+
+                    <div class="search-bar-filters">
+                        <div class="filter-dropdown-inline">
+                            <select id="filterVendedor" onchange="filterLucroReal()">
+                                <option value="">Vendedor</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </div>
+                        <div class="month-navigation-inline">
+                            <button onclick="changeMonth(-1)" class="month-nav-arrow" title="Mês anterior">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6" />
+                                </svg>
+                            </button>
+                            <div class="month-display-inline">
+                                <span id="currentMonth">Carregando...</span>
+                            </div>
+                            <button onclick="changeMonth(1)" class="month-nav-arrow" title="Próximo mês">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button class="calendar-btn" onclick="toggleCalendar()" title="Selecionar mês">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                    </button>
+                    <button class="calendar-btn" onclick="syncData()" title="Sincronizar" id="btnSync">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10" />
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                    </button>
+                    <button class="calendar-btn" onclick="openRelatorioAnualModal()" title="Relatório Anual">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar Modal -->
+            <div class="calendar-modal" id="calendarModal">
+                <div class="calendar-content">
+                    <div class="calendar-header">
+                        <button onclick="changeCalendarYear(-1)" class="calendar-year-nav">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </button>
+                        <h3 id="calendarYear">2026</h3>
+                        <button onclick="changeCalendarYear(1)" class="calendar-year-nav">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="calendar-months" id="calendarMonths"></div>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="card table-card">
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NF</th>
+                                <th>Vendedor</th>
+                                <th>Venda (R$)</th>
+                                <th>Custo (R$)</th>
+                                <th>Frete (R$)</th>
+                                <th>Comissão (R$)</th>
+                                <th>Imp Fed (R$)</th>
+                                <th>Lucro Real (R$)</th>
+                                <th>Margem Líq.</th>
+                                <th style="text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lucroContainer"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDIÇÃO (duplo clique) -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Editar valores - NF <span id="editNF"></span></h3>
+                <button class="close-modal" onclick="closeEditModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editCusto">Custo (R$)</label>
+                    <input type="number" id="editCusto" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editComissao">Comissão (R$)</label>
+                    <input type="number" id="editComissao" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editImposto">Imposto Federal (R$)</label>
+                    <input type="number" id="editImposto" step="0.01" min="0">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeEditModal()" class="secondary">Cancelar</button>
+                <button type="button" onclick="saveEditModal()" class="btn-save-green">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE RELATÓRIO ANUAL -->
+    <div class="modal-overlay" id="relatorioModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                    <button onclick="changeRelatorioYear(-1)" class="year-nav-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </button>
+                    <h3 class="modal-title" id="relatorioAnoTitulo" style="flex:1; text-align:center;">Relatório Anual 2026</h3>
+                    <button onclick="changeRelatorioYear(1)" class="year-nav-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                    </button>
+                </div>
+                <button class="close-modal" onclick="closeRelatorioModal()">✕</button>
+            </div>
+            <div class="modal-body" id="relatorioBody"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="calendar.js"></script>
+</body>
+</html>
