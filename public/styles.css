@@ -1,4 +1,4 @@
-/* VARIÁVEIS BASE (idênticas ao Pedido de Faturamento) */
+/* VARIÁVEIS BASE */
 :root {
     --primary: #ff521d;
     --bg-primary: #FFFFFF;
@@ -25,7 +25,6 @@
     --btn-view: #ff521d;
     --btn-save: #22C55E;
     --alert-color: #EF4444;
-    --btn-pdf: #1E3A8A;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -103,14 +102,6 @@ body {
         transform: translateY(0);
     }
 }
-@keyframes pulseAlert {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-    50% { box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2); }
-}
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
 @keyframes pulse-online {
     0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
     70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
@@ -171,12 +162,6 @@ h1 {
     margin: 0;
 }
 
-h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    color: var(--text-primary);
-}
-
 /* STATUS DE CONEXÃO */
 .connection-status {
     display: flex;
@@ -202,31 +187,6 @@ h2 {
 .connection-status.offline .status-dot {
     background-color: #EF4444;
     animation: pulse-offline 2s infinite;
-}
-
-/* BOTÃO DE NOVO PEDIDO (mantido, mesmo não usado) */
-.btn-new-order-header {
-    background: var(--btn-register);
-    color: white;
-    border: none;
-    padding: 0.65rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
-    white-space: nowrap;
-}
-
-.btn-new-order-header:hover {
-    background: #2563EB;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
 }
 
 /* BARRA DE PESQUISA */
@@ -356,7 +316,7 @@ h2 {
     white-space: nowrap;
 }
 
-/* BOTÕES DE AÇÃO (CALENDÁRIO, SINCRONIZAR, RELATÓRIO) */
+/* BOTÕES DE AÇÃO */
 .calendar-btn {
     background: transparent;
     border: none;
@@ -475,7 +435,7 @@ h2 {
     border-color: var(--primary);
 }
 
-/* DASHBOARD GRID (5 cards) */
+/* DASHBOARD GRID */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -529,11 +489,6 @@ h2 {
 .stat-icon-info {
     background: rgba(59, 130, 246, 0.1);
     color: #3B82F6;
-}
-
-.stat-icon-danger {
-    background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
 }
 
 .stat-content {
@@ -602,6 +557,7 @@ td {
 tbody tr {
     background: var(--bg-card);
     transition: background 0.2s ease;
+    cursor: pointer;
 }
 
 tbody tr:nth-child(even) {
@@ -610,10 +566,13 @@ tbody tr:nth-child(even) {
 
 tbody tr:hover {
     background: var(--table-hover);
-    cursor: pointer;
 }
 
-/* BADGES (reaproveitados) */
+tbody tr:active {
+    opacity: 0.8;
+}
+
+/* BADGES */
 .badge {
     padding: 4px 12px;
     border-radius: 6px;
@@ -623,37 +582,7 @@ tbody tr:hover {
     white-space: nowrap;
 }
 
-.badge.aberta {
-    background: rgba(255, 82, 29, 0.1);
-    color: #ff521d;
-    border: 1px solid rgba(255, 82, 29, 0.2);
-}
-
-.badge.fechada {
-    background: rgba(34, 197, 94, 0.1);
-    color: #16A34A;
-    border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.badge.transito {
-    background: rgba(251, 146, 60, 0.1);
-    color: #EA580C;
-    border: 1px solid rgba(251, 146, 60, 0.2);
-}
-
-.badge.entregue {
-    background: rgba(59, 130, 246, 0.1);
-    color: #2563EB;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.badge.pago {
-    background: rgba(34, 197, 94, 0.1);
-    color: #16A34A;
-    border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-/* FORMULÁRIOS E INPUTS (para modais) */
+/* FORMULÁRIOS */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -702,7 +631,7 @@ input[readonly] {
     opacity: 0.7;
 }
 
-/* BOTÕES GLOBAIS */
+/* BOTÕES */
 button {
     background: var(--primary);
     color: white;
@@ -735,30 +664,17 @@ button.secondary {
     background: #6B7280;
 }
 
-button.danger, .btn-delete {
+button.danger {
     background: var(--btn-delete);
 }
 
 button.success, .btn-save-green {
     background: var(--btn-save);
-    color: white;
 }
 
 button.small {
     padding: 8px 12px;
     font-size: 0.85rem;
-}
-
-.action-btn {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    margin: 0 4px;
-    min-width: 70px;
-}
-
-.actions-cell {
-    white-space: nowrap;
-    min-width: 100px;
 }
 
 /* MODAL OVERLAY */
@@ -856,50 +772,25 @@ button.small {
     min-width: 120px;
 }
 
-/* PAGINAÇÃO DOS MODAIS */
-.modal-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
+/* ESTILO PARA AS SETAS DO RELATÓRIO ANUAL */
+.year-nav-btn {
+    background: transparent !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    padding: 0.5rem !important;
+    border-radius: 6px !important;
+    min-width: auto !important;
+    margin: 0 !important;
 }
 
-.modal-pagination button {
-    padding: 8px 16px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-card);
-    color: var(--text-primary);
-    cursor: pointer;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: all 0.2s ease;
+.year-nav-btn:hover {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--text-secondary) !important;
 }
 
-.modal-pagination button:hover:not(:disabled) {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.modal-pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* INDICADORES DE TENDÊNCIA */
-.trend-up {
-    color: #22C55E;
-}
-
-.trend-down {
-    color: #EF4444;
-}
-
-.hidden {
-    display: none !important;
+.year-nav-btn svg {
+    stroke: currentColor;
 }
 
 /* MENSAGENS FLUTUANTES */
@@ -928,6 +819,10 @@ button.small {
     background: #EF4444;
     color: #FFFFFF;
     border-color: #DC2626;
+}
+
+.hidden {
+    display: none !important;
 }
 
 /* RESPONSIVIDADE */
@@ -1008,9 +903,5 @@ button.small {
     
     .modal-actions button {
         width: 100%;
-    }
-    
-    .actions-cell {
-        min-width: auto;
     }
 }
