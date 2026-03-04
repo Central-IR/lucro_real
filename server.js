@@ -78,12 +78,6 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==============================
-// ROTAS PROTEGIDAS – PEDIDOS (existentes, mantidas)
-// ==============================
-// (código existente das rotas de pedidos e estoque permanece aqui)
-// ... (omitido por brevidade, mas deve ser mantido do arquivo original)
-
-// ==============================
 // ROTAS PROTEGIDAS – LUCRO REAL
 // ==============================
 
@@ -91,18 +85,31 @@ app.get('/api/health', (req, res) => {
 app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     try {
         const { mes, ano } = req.query;
-        if (!mes || !ano) {
-            return res.status(400).json({ error: 'Mês e ano são obrigatórios' });
+        
+        let supabaseUrl;
+        
+        if (mes !== undefined && ano !== undefined) {
+            const month = parseInt(mes); // 0-based (Janeiro = 0)
+            const year = parseInt(ano);
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0);
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+            
+            supabaseUrl = `${SUPABASE_URL}/rest/v1/lucro_real?select=*&data_emissao=gte.${startStr}&data_emissao=lte.${endStr}&order=data_emissao.asc`;
+        } else if (ano !== undefined) {
+            // Buscar ano inteiro para relatório
+            const year = parseInt(ano);
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31);
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+            
+            supabaseUrl = `${SUPABASE_URL}/rest/v1/lucro_real?select=*&data_emissao=gte.${startStr}&data_emissao=lte.${endStr}`;
+        } else {
+            return res.status(400).json({ error: 'Mês/ano ou ano são obrigatórios' });
         }
 
-        const month = parseInt(mes); // 0‑based (Janeiro = 0)
-        const year = parseInt(ano);
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
-        const startStr = startDate.toISOString().split('T')[0];
-        const endStr = endDate.toISOString().split('T')[0];
-
-        const supabaseUrl = `${SUPABASE_URL}/rest/v1/lucro_real?select=*&data_emissao=gte.${startStr}&data_emissao=lte.${endStr}&order=data_emissao.asc`;
         const response = await fetch(supabaseUrl, {
             headers: {
                 apikey: SUPABASE_KEY,
@@ -124,7 +131,7 @@ app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     }
 });
 
-// POST /api/lucro-real - criar novo registro (usado automaticamente ao emitir pedido)
+// POST /api/lucro-real - criar novo registro
 app.post('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
@@ -151,7 +158,7 @@ app.post('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     }
 });
 
-// PATCH /api/lucro-real/:codigo - atualizar (custo, comissão, imposto, etc.)
+// PATCH /api/lucro-real/:codigo - atualizar
 app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${req.params.codigo}`, {
@@ -177,7 +184,7 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
     }
 });
 
-// DELETE /api/lucro-real/:codigo - remover (quando pedido for revertido)
+// DELETE /api/lucro-real/:codigo - remover
 app.delete('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${req.params.codigo}`, {
@@ -200,56 +207,6 @@ app.delete('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) =>
 });
 
 // ==============================
-// INTEGRAÇÃO COM PEDIDOS (gatilho automático)
-// ==============================
-// Esta função é chamada internamente pelas rotas de pedidos ao emitir/reverter
-async function sincronizarLucroReal(pedido, emitido) {
-    if (emitido) {
-        // Calcular valores iniciais
-        const venda = parseFloat(pedido.valor_total?.replace('R$', '').replace('.', '').replace(',', '.')) || 0;
-        const frete = parseFloat(pedido.valor_frete?.replace('R$', '').replace('.', '').replace(',', '.')) || 0;
-        const comissao = venda * (1.25 / 100);
-        const impostoFederal = venda * (11 / 100);
-        const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
-        const margemLiquida = venda ? lucroReal / venda : 0;
-
-        const registro = {
-            codigo: pedido.codigo,
-            vendedor: pedido.vendedor || pedido.responsavel,
-            venda,
-            custo: pedido.custo || 0,
-            frete,
-            comissao,
-            imposto_federal: impostoFederal,
-            lucro_real: lucroReal,
-            margem_liquida: margemLiquida,
-            data_emissao: pedido.data_emissao || new Date().toISOString().split('T')[0]
-        };
-
-        // Upsert (caso já exista, atualiza)
-        await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
-            method: 'POST',
-            headers: {
-                apikey: SUPABASE_KEY,
-                Authorization: `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                Prefer: 'resolution=merge-duplicates'
-            },
-            body: JSON.stringify(registro)
-        });
-    } else {
-        // Remover registro se pedido foi revertido
-        await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${pedido.codigo}`, {
-            method: 'DELETE',
-            headers: {
-                apikey: SUPABASE_KEY,
-                Authorization: `Bearer ${SUPABASE_KEY}`
-            }
-        });
-    }
-}
-
-// ==============================
 // SERVIR FRONTEND
 // ==============================
 app.use(express.static(path.join(__dirname, 'public')));
@@ -262,7 +219,7 @@ app.get('*', (req, res) => {
 // INICIAR SERVIDOR
 // ==============================
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
     console.log('📦 Supabase conectado com Service Role');
     console.log('💰 Tabela: lucro_real');
