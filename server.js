@@ -3,30 +3,48 @@ const path = require('path');
 const cors = require('cors');
 require('dotenv').config();
 
-// ==============================
-// CONFIGURAÇÃO INICIAL
-// ==============================
 const app = express();
 const PORT = process.env.PORT || 3004;
 
 app.use(cors());
 app.use(express.json());
 
-// ==============================
-// VARIÁVEIS DE AMBIENTE
-// ==============================
+// Variáveis de ambiente
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PORTAL_URL = process.env.PORTAL_URL || 'https://ir-comercio-portal-zcan.onrender.com';
+
+console.log('🔧 Configuração:');
+console.log(`SUPABASE_URL: ${SUPABASE_URL ? '✓' : '✗'}`);
+console.log(`SUPABASE_KEY: ${SUPABASE_KEY ? '✓' : '✗'}`);
+console.log(`PORTAL_URL: ${PORTAL_URL}`);
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('❌ ERRO: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas');
     process.exit(1);
 }
 
-// ==============================
-// MIDDLEWARE DE AUTENTICAÇÃO
-// ==============================
+// Teste de conexão com Supabase (apenas para verificar se a chave é válida)
+async function testSupabaseConnection() {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`
+            }
+        });
+        if (response.ok) {
+            console.log('✅ Conexão com Supabase OK');
+        } else {
+            console.error('❌ Falha na conexão com Supabase:', response.status, await response.text());
+        }
+    } catch (error) {
+        console.error('❌ Erro ao conectar com Supabase:', error.message);
+    }
+}
+testSupabaseConnection();
+
+// Middleware de autenticação
 async function verificarAutenticacao(req, res, next) {
     const publicPaths = [
         '/',
@@ -34,7 +52,8 @@ async function verificarAutenticacao(req, res, next) {
         '/api/monitorar-pedidos',
         '/api/carga-inicial',
         '/api/debug/pedidos',
-        '/api/debug/lucro-real'
+        '/api/debug/lucro-real',
+        '/api/test/supabase'
     ];
 
     if (publicPaths.includes(req.path)) {
@@ -42,7 +61,6 @@ async function verificarAutenticacao(req, res, next) {
     }
 
     const sessionToken = req.headers['x-session-token'];
-
     if (!sessionToken) {
         return res.status(401).json({ error: 'Token de sessão não fornecido' });
     }
@@ -59,14 +77,12 @@ async function verificarAutenticacao(req, res, next) {
         }
 
         const data = await response.json();
-
         if (!data.valid) {
             return res.status(401).json({ error: 'Sessão inválida' });
         }
 
         req.user = data.session;
         req.sessionToken = sessionToken;
-
         next();
     } catch (error) {
         console.error('Erro ao validar sessão:', error);
@@ -74,22 +90,34 @@ async function verificarAutenticacao(req, res, next) {
     }
 }
 
-// ==============================
-// ROTAS PÚBLICAS
-// ==============================
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        timestamp: new Date().toISOString()
-    });
+// Rota de teste do Supabase
+app.get('/api/test/supabase', async (req, res) => {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo&limit=1`, {
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            res.json({ success: true, message: 'Conexão OK', data });
+        } else {
+            res.status(500).json({ success: false, error: await response.text() });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-// ==============================
-// FUNÇÕES AUXILIARES
-// ==============================
+// Rota pública de health
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Funções auxiliares
 function parseValorMonetario(valor) {
     if (!valor) return 0;
-    // Remove 'R$', pontos de milhar e substitui vírgula por ponto
     const cleaned = String(valor)
         .replace('R$', '')
         .replace(/\./g, '')
@@ -103,17 +131,10 @@ function calcularValores(pedido) {
     const frete = parseValorMonetario(pedido.valor_frete);
     const comissao = venda * (1.25 / 100);
     const impostoFederal = venda * (11 / 100);
-    return {
-        venda,
-        frete,
-        comissao,
-        impostoFederal
-    };
+    return { venda, frete, comissao, impostoFederal };
 }
 
-// ==============================
-// FUNÇÕES DE PROCESSAMENTO
-// ==============================
+// Funções de banco
 async function obterRegistroExistente(codigo) {
     try {
         const response = await fetch(
@@ -135,18 +156,15 @@ async function obterRegistroExistente(codigo) {
 
 async function criarRegistroLucroReal(pedido) {
     try {
+        console.log(`Criando registro para pedido ${pedido.codigo}`);
         const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
-        // Custo inicial é 0 (será editado manualmente depois)
         const lucroReal = venda - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // Campo NF: usa o campo 'nf' do pedido; se vazio, exibe '-'
         const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
-        // Data de emissão: prioriza data_emissao, depois data_registro, senão a data atual
         let dataEmissao = pedido.data_emissao || pedido.data_registro;
         if (dataEmissao) {
-            // Se for string ISO, pega só a parte da data
             dataEmissao = dataEmissao.split('T')[0];
         } else {
             dataEmissao = new Date().toISOString().split('T')[0];
@@ -156,10 +174,10 @@ async function criarRegistroLucroReal(pedido) {
             codigo: pedido.codigo,
             nf: numeroNF,
             vendedor: pedido.vendedor || pedido.responsavel || '',
-            venda: venda,
+            venda,
             custo: 0,
-            frete: frete,
-            comissao: comissao,
+            frete,
+            comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
@@ -193,8 +211,8 @@ async function criarRegistroLucroReal(pedido) {
 
 async function atualizarRegistroLucroReal(pedido, registroExistente) {
     try {
+        console.log(`Atualizando registro para pedido ${pedido.codigo}`);
         const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
-        // Preserva o custo manual existente
         const custoAtual = registroExistente.custo || 0;
         const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
@@ -211,9 +229,9 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
         const updates = {
             nf: numeroNF,
             vendedor: pedido.vendedor || pedido.responsavel || '',
-            venda: venda,
-            frete: frete,
-            comissao: comissao,
+            venda,
+            frete,
+            comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
@@ -258,25 +276,22 @@ async function processarPedido(pedido) {
     }
 }
 
-// ==============================
-// MONITORAMENTO CONTÍNUO
-// ==============================
-let ultimaVerificacao = new Date(0); // Inicia como época
+// Monitoramento
+let ultimaVerificacao = new Date(0);
 
 async function verificarPedidosRecentes() {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos criados/atualizados recentemente...`);
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos...`);
     try {
-        // Busca pedidos que foram criados ou atualizados desde a última verificação (menos 5 segundos de margem)
         const desde = new Date(ultimaVerificacao.getTime() - 5000).toISOString();
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&updated_at=gte.${desde}&order=updated_at.asc`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
+        const url = `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&updated_at=gte.${desde}&order=updated_at.asc`;
+        console.log('URL:', url);
+
+        const response = await fetch(url, {
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`
             }
-        );
+        });
 
         if (!response.ok) {
             console.error('Erro ao buscar pedidos:', response.status, await response.text());
@@ -284,14 +299,9 @@ async function verificarPedidosRecentes() {
         }
 
         const pedidos = await response.json();
-        ultimaVerificacao = new Date(); // Atualiza a referência
+        ultimaVerificacao = new Date();
 
-        if (pedidos.length === 0) {
-            console.log('📭 Nenhum pedido novo ou atualizado encontrado');
-            return;
-        }
-
-        console.log(`📦 ${pedidos.length} pedido(s) encontrado(s)`);
+        console.log(`📦 Encontrados ${pedidos.length} pedidos`);
         for (const pedido of pedidos) {
             await processarPedido(pedido);
         }
@@ -300,9 +310,7 @@ async function verificarPedidosRecentes() {
     }
 }
 
-// ==============================
-// CARGA COMPLETA (todos os pedidos)
-// ==============================
+// Carga completa
 async function cargaCompleta() {
     console.log('🔄 Iniciando carga completa de todos os pedidos...');
     try {
@@ -335,9 +343,7 @@ async function cargaCompleta() {
     }
 }
 
-// ==============================
-// ROTAS DE DEBUG
-// ==============================
+// Rotas de debug
 app.get('/api/debug/pedidos', async (req, res) => {
     try {
         const response = await fetch(
@@ -374,22 +380,18 @@ app.get('/api/debug/lucro-real', async (req, res) => {
     }
 });
 
-// ==============================
-// ROTAS PARA DISPARO MANUAL
-// ==============================
+// Rotas manuais
 app.get('/api/carga-inicial', async (req, res) => {
     await cargaCompleta();
-    res.json({ success: true, message: 'Carga completa executada' });
+    res.json({ success: true });
 });
 
 app.get('/api/monitorar-pedidos', async (req, res) => {
     await verificarPedidosRecentes();
-    res.json({ success: true, message: 'Monitoramento rápido executado' });
+    res.json({ success: true });
 });
 
-// ==============================
-// ROTAS PROTEGIDAS – LUCRO REAL
-// ==============================
+// Rotas protegidas
 app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     try {
         const { mes, ano } = req.query;
@@ -491,39 +493,20 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
     }
 });
 
-// ==============================
-// INICIAR MONITORAMENTO
-// ==============================
-// Faz uma carga completa ao iniciar (após 3 segundos)
+// Iniciar
 setTimeout(() => {
     console.log('⏳ Executando carga inicial...');
     cargaCompleta();
 }, 3000);
 
-// Monitoramento rápido a cada 15 segundos
 setInterval(verificarPedidosRecentes, 15 * 1000);
-
-// Também uma varredura completa a cada 30 minutos para garantir consistência
 setInterval(cargaCompleta, 30 * 60 * 1000);
 
-// ==============================
-// SERVIR FRONTEND
-// ==============================
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ==============================
-// INICIAR SERVIDOR
-// ==============================
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
-    console.log('🔒 Autenticação centralizada no Portal');
-    console.log('📦 Supabase conectado');
-    console.log('💰 Processando TODOS os pedidos (baseado no código)');
-    console.log('⏱️  Verificando atualizações a cada 15 segundos');
-    console.log('🔄 Carga completa a cada 30 minutos');
-    console.log('🔍 Rota de debug pedidos: /api/debug/pedidos');
-    console.log('🔍 Rota de debug lucro-real: /api/debug/lucro-real');
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
