@@ -931,3 +931,13 @@ button.small {
         width: 100%;
     }
 }
+
+/* Separador de meses na tabela */
+.month-separator td {
+    background: var(--th-bg);
+    color: var(--th-color);
+    font-weight: bold;
+    text-align: center;
+    padding: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
