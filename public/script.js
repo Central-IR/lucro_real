@@ -101,9 +101,9 @@ async function syncData() {
             headers: { 'X-Session-Token': sessionToken }
         });
         await loadLucroReal();
-        showMessage('Dados sincronizados', 'success');
+        showMessage('DADOS SINCRONIZADOS', 'success');
     } catch (error) {
-        showMessage('Erro ao sincronizar', 'error');
+        showMessage('ERRO AO SINCRONIZAR', 'error');
     } finally {
         if (btnSync) {
             btnSync.classList.remove('syncing');
@@ -201,10 +201,10 @@ function updateDashboard() {
     });
 
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
-    document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalCusto)}</span>`;
-    document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalFrete)}</span>`;
+    document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700;">${formatarMoeda(totalCusto)}</span>`;
+    document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
     document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
-    document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalImposto)}</span>`;
+    document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
 
     const lucroBruto = totalVenda - totalCusto;
     const lbElement = document.getElementById('totalLucroBruto');
@@ -253,10 +253,10 @@ function updateTable() {
         );
     }
     if (filterVendedor) {
-        filtered = filtered.filter(r => (r.vendedor || '').toLowerCase() === filterVendedor.toLowerCase());
+        filtered = filtered.filter(r => (r.vendedor || '') === filterVendedor);
     }
 
-    // Ordenar por data de emissão (já veio ordenado, mas garantimos)
+    // Já ordenado por data_emissao do backend, mas garantimos
     filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
 
     if (filtered.length === 0) {
@@ -268,19 +268,17 @@ function updateTable() {
         const lucroReal = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
         const margem = r.venda ? (lucroReal / r.venda) * 100 : 0;
         const lucroClass = lucroReal >= 0 ? 'stat-value-success' : 'stat-value-danger';
-        // Margem sem cor especial e sem negrito
-        const margemStyle = '';
         
         return `
         <tr onclick="abrirEditModal('${r.codigo}')">
-            <td style="text-transform:uppercase;">${(r.nf || '-').toUpperCase()}</td>
-            <td style="text-transform:uppercase;">${(r.vendedor || '-').toUpperCase()}</td>
+            <td>${(r.nf || '-').toUpperCase()}</td>
+            <td>${(r.vendedor || '-').toUpperCase()}</td>
             <td>${formatarMoeda(r.venda)}</td>
-            <td style="font-weight:700; color:#22C55E;">${formatarMoeda(r.custo)}</td>
+            <td style="color: #22C55E; font-weight: 700;">${formatarMoeda(r.custo)}</td>
             <td>${formatarMoeda(r.frete)}</td>
             <td>${formatarMoeda(r.comissao)}</td>
-            <td style="color:#EF4444;">${formatarMoeda(r.imposto_federal)}</td>
-            <td style="font-weight:700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
+            <td style="color: #EF4444;">${formatarMoeda(r.imposto_federal)}</td>
+            <td style="font-weight: 700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
             <td>${margem.toFixed(2)}%</td>
         </tr>`;
     }).join('');
@@ -307,7 +305,7 @@ function showMessage(message, type = 'success') {
 }
 
 // ============================================
-// MODAL DE EDIÇÃO
+// MODAL DE EDIÇÃO (um clique)
 // ============================================
 let currentEditCodigo = null;
 
@@ -352,9 +350,8 @@ async function saveEditModal() {
         });
 
         if (!response.ok) {
-            const errText = await response.text();
-            console.error('Erro no PATCH:', errText);
-            throw new Error('Erro ao salvar');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Erro ao salvar');
         }
 
         const registro = lucroData.find(r => r.codigo === currentEditCodigo);
@@ -367,10 +364,10 @@ async function saveEditModal() {
         updateTable();
         updateDashboard();
         closeEditModal();
-        showMessage('Valores atualizados', 'success');
+        showMessage('VALORES ATUALIZADOS', 'success');
     } catch (error) {
         console.error(error);
-        showMessage('Erro ao salvar', 'error');
+        showMessage('ERRO AO SALVAR: ' + error.message, 'error');
     }
 }
 
@@ -381,7 +378,7 @@ function openDiferencaModal() {
     const mes = currentMonth.getMonth();
     const ano = currentMonth.getFullYear();
     document.getElementById('diferencaMesAno').textContent = 
-        `${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mes]} ${ano}`;
+        `${['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][mes]} ${ano}`;
     
     fetch(`${API_URL}/diferencas?mes=${mes}&ano=${ano}`, {
         headers: { 'X-Session-Token': sessionToken }
@@ -415,10 +412,10 @@ async function saveDiferenca() {
             },
             body: JSON.stringify({ mes, ano, valor })
         });
-        showMessage('Diferença salva', 'success');
+        showMessage('DIFERENÇA SALVA', 'success');
         closeDiferencaModal();
     } catch (error) {
-        showMessage('Erro ao salvar', 'error');
+        showMessage('ERRO AO SALVAR', 'error');
     }
 }
 
@@ -519,15 +516,15 @@ async function renderRelatorio() {
             html += `
                 <div style="padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107,114,128,0.2); border-radius: 8px; position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 style="margin:0 0 0.5rem 0; color: var(--text-primary); font-weight:700;">${nome}</h4>
+                        <h4 style="margin:0 0 0.5rem 0; color: var(--text-primary);">${nome}</h4>
                         ${tendencia}
                     </div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Frete:</span> <span style="color:#3B82F6;">${percentualFrete}%</span></div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro:</span> ${formatarMoeda(m.lucroTotal)}</div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}" style="font-weight:700;">${formatarMoeda(lucroBruto)}</span></div>
-                    <div><span style="font-weight:700;">Simples:</span> ${formatarMoeda(m.impostoTotal)}</div>
-                    <div style="margin-top:0.5rem; font-size:0.9rem;"><span style="font-weight:700;">Diferença:</span> ${formatarMoeda(diffs[mesIndex])}</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Frete:</span> <span style="color: #3B82F6;">${percentualFrete}%</span></div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Lucro:</span> ${formatarMoeda(m.lucroTotal)}</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}">${formatarMoeda(lucroBruto)}</span></div>
+                    <div><span style="font-weight: 700;">Simples:</span> ${formatarMoeda(m.impostoTotal)}</div>
+                    <div style="margin-top:0.5rem; font-size:0.9rem;"><span style="font-weight: 700;">Diferença:</span> ${formatarMoeda(diffs[mesIndex])}</div>
                 </div>
             `;
         });
@@ -555,8 +552,8 @@ async function renderRelatorio() {
         const lucroBrutoAnoClass = lucroBrutoAno >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
         html += `
-            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap:wrap;">
-                <div class="stat-card" style="flex:1; min-width:160px;">
+            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap: wrap;">
+                <div class="stat-card" style="flex:1; min-width:150px;">
                     <div class="stat-icon stat-icon-default" style="background:rgba(107,114,128,0.1);">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10" />
@@ -568,7 +565,7 @@ async function renderRelatorio() {
                         <div class="stat-label">TOTAL FRETE</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; min-width:160px;">
+                <div class="stat-card" style="flex:1; min-width:150px;">
                     <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -579,7 +576,7 @@ async function renderRelatorio() {
                         <div class="stat-label">TOTAL LUCRO</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; min-width:160px;">
+                <div class="stat-card" style="flex:1; min-width:150px;">
                     <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 7h16M4 12h16M4 17h10" />
@@ -590,18 +587,18 @@ async function renderRelatorio() {
                         <div class="stat-label">TOTAL CUSTO</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; min-width:160px;">
-                    <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
+                <div class="stat-card" style="flex:1; min-width:150px;">
+                    <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 10h18M3 14h18" />
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" style="color:#EF4444;">${formatarMoeda(totalImpostoAno)}</div>
+                        <div class="stat-value">${formatarMoeda(totalImpostoAno)}</div>
                         <div class="stat-label">TOTAL IMPOSTO</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; min-width:160px;">
+                <div class="stat-card" style="flex:1; min-width:150px;">
                     <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 12H4M12 4v16" />
@@ -618,6 +615,6 @@ async function renderRelatorio() {
         document.getElementById('relatorioBody').innerHTML = html;
     } catch (error) {
         console.error('Erro ao carregar dados anuais', error);
-        document.getElementById('relatorioBody').innerHTML = '<p style="text-align:center;">Erro ao carregar dados.</p>';
+        document.getElementById('relatorioBody').innerHTML = '<p style="text-align:center;">ERRO AO CARREGAR DADOS.</p>';
     }
 }
