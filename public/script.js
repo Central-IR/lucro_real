@@ -256,7 +256,7 @@ function updateTable() {
         filtered = filtered.filter(r => (r.vendedor || '') === filterVendedor);
     }
 
-    // Já ordenado por data_emissao do backend, mas garantimos
+    // Ordenar por data de emissão (crescente)
     filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
 
     if (filtered.length === 0) {
@@ -274,10 +274,10 @@ function updateTable() {
             <td>${(r.nf || '-').toUpperCase()}</td>
             <td>${(r.vendedor || '-').toUpperCase()}</td>
             <td>${formatarMoeda(r.venda)}</td>
-            <td style="color: #22C55E; font-weight: 700;">${formatarMoeda(r.custo)}</td>
+            <td style="color: #EF4444; font-weight: 700;">${formatarMoeda(r.custo)}</td>
             <td>${formatarMoeda(r.frete)}</td>
             <td>${formatarMoeda(r.comissao)}</td>
-            <td style="color: #EF4444;">${formatarMoeda(r.imposto_federal)}</td>
+            <td style="color: #EF4444; font-weight: 700;">${formatarMoeda(r.imposto_federal)}</td>
             <td style="font-weight: 700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
             <td>${margem.toFixed(2)}%</td>
         </tr>`;
@@ -372,54 +372,6 @@ async function saveEditModal() {
 }
 
 // ============================================
-// MODAL DE DIFERENÇA MENSAL
-// ============================================
-function openDiferencaModal() {
-    const mes = currentMonth.getMonth();
-    const ano = currentMonth.getFullYear();
-    document.getElementById('diferencaMesAno').textContent = 
-        `${['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][mes]} ${ano}`;
-    
-    fetch(`${API_URL}/diferencas?mes=${mes}&ano=${ano}`, {
-        headers: { 'X-Session-Token': sessionToken }
-    })
-    .then(res => res.json())
-    .then(data => {
-        document.getElementById('diferencaValor').value = data.valor || 0;
-    })
-    .catch(err => {
-        document.getElementById('diferencaValor').value = 0;
-    });
-
-    document.getElementById('diferencaModal').classList.add('show');
-}
-
-function closeDiferencaModal() {
-    document.getElementById('diferencaModal').classList.remove('show');
-}
-
-async function saveDiferenca() {
-    const mes = currentMonth.getMonth();
-    const ano = currentMonth.getFullYear();
-    const valor = parseFloat(document.getElementById('diferencaValor').value) || 0;
-
-    try {
-        await fetch(`${API_URL}/diferencas`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Session-Token': sessionToken
-            },
-            body: JSON.stringify({ mes, ano, valor })
-        });
-        showMessage('DIFERENÇA SALVA', 'success');
-        closeDiferencaModal();
-    } catch (error) {
-        showMessage('ERRO AO SALVAR', 'error');
-    }
-}
-
-// ============================================
 // RELATÓRIO ANUAL
 // ============================================
 function openRelatorioAnualModal() {
@@ -453,16 +405,6 @@ async function renderRelatorio() {
         });
         if (!response.ok) throw new Error();
         const dadosAno = await response.json();
-
-        // Carregar diferenças mensais
-        const diffs = {};
-        for (let m = 0; m < 12; m++) {
-            const diffRes = await fetch(`${API_URL}/diferencas?mes=${m}&ano=${relatorioAno}`, {
-                headers: { 'X-Session-Token': sessionToken }
-            });
-            const diffData = await diffRes.json();
-            diffs[m] = diffData.valor || 0;
-        }
 
         const meses = Array(12).fill().map(() => ({
             freteTotal: 0,
@@ -524,7 +466,6 @@ async function renderRelatorio() {
                     <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
                     <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}">${formatarMoeda(lucroBruto)}</span></div>
                     <div><span style="font-weight: 700;">Simples:</span> ${formatarMoeda(m.impostoTotal)}</div>
-                    <div style="margin-top:0.5rem; font-size:0.9rem;"><span style="font-weight: 700;">Diferença:</span> ${formatarMoeda(diffs[mesIndex])}</div>
                 </div>
             `;
         });
