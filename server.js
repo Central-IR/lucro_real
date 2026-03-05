@@ -111,10 +111,10 @@ function calcularValores(pedido) {
 // ==============================
 // FUNÇÕES DE PROCESSAMENTO
 // ==============================
-async function pedidoJaProcessado(codigo) {
+async function buscarRegistroPorCodigo(codigo) {
     try {
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${codigo}&select=id`,
+            `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${codigo}&select=*`,
             {
                 headers: {
                     apikey: SUPABASE_KEY,
@@ -123,67 +123,121 @@ async function pedidoJaProcessado(codigo) {
             }
         );
         const data = await response.json();
-        return data.length > 0;
+        return data[0] || null;
     } catch (error) {
-        console.error('Erro ao verificar pedido processado:', error);
-        return false;
+        console.error('Erro ao buscar registro:', error);
+        return null;
     }
 }
 
-async function criarRegistroLucroReal(pedido) {
+async function criarOuAtualizarRegistro(pedido) {
     try {
-        const { venda, frete, comissao, impostoFederal, lucroReal, margemLiquida } = calcularValores(pedido);
-
+        const valores = calcularValores(pedido);
         const registro = {
             codigo: pedido.codigo,
             nf: pedido.documento || '-',
             vendedor: pedido.vendedor || pedido.responsavel || '',
-            venda: venda,
-            custo: 0,
-            frete: frete,
-            comissao: comissao,
-            imposto_federal: impostoFederal,
-            lucro_real: lucroReal,
-            margem_liquida: margemLiquida,
+            venda: valores.venda,
+            custo: 0, // será editável depois
+            frete: valores.frete,
+            comissao: valores.comissao,
+            imposto_federal: valores.impostoFederal,
+            lucro_real: valores.lucroReal,
+            margem_liquida: valores.margemLiquida,
             data_emissao: pedido.data_emissao || new Date().toISOString().split('T')[0]
         };
 
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
-            method: 'POST',
-            headers: {
-                apikey: SUPABASE_KEY,
-                Authorization: `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                Prefer: 'return=representation'
-            },
-            body: JSON.stringify(registro)
-        });
+        // Verificar se já existe
+        const existente = await buscarRegistroPorCodigo(pedido.codigo);
+        let response;
+        if (existente) {
+            // Atualizar (manter custo manual se já existir)
+            registro.custo = existente.custo; // preserva custo manual
+            // Recalcular lucro_real com custo preservado
+            registro.lucro_real = registro.venda - registro.custo - registro.frete - registro.comissao - registro.imposto_federal;
+            registro.margem_liquida = registro.venda ? registro.lucro_real / registro.venda : 0;
+
+            response = await fetch(
+                `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${pedido.codigo}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: SUPABASE_KEY,
+                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        Prefer: 'return=representation'
+                    },
+                    body: JSON.stringify(registro)
+                }
+            );
+            console.log(`🔄 Registro atualizado para pedido ${pedido.codigo} (NF: ${pedido.documento || '-'})`);
+        } else {
+            // Criar novo
+            response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
+                method: 'POST',
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    Prefer: 'return=representation'
+                },
+                body: JSON.stringify(registro)
+            });
+            console.log(`✅ Registro criado para pedido ${pedido.codigo} (NF: ${pedido.documento || '-'})`);
+        }
 
         if (!response.ok) {
             const erro = await response.text();
-            console.error('Erro ao criar registro:', erro);
+            console.error('Erro ao salvar registro:', erro);
             return false;
         }
-
-        console.log(`✅ Registro criado para pedido ${pedido.codigo} (NF: ${pedido.documento || '-'})`);
         return true;
     } catch (error) {
-        console.error('Erro ao criar registro:', error);
+        console.error('Erro ao criar/atualizar registro:', error);
         return false;
     }
 }
 
-async function processarPedidoEmitido(pedido) {
-    const jaProcessado = await pedidoJaProcessado(pedido.codigo);
-    if (jaProcessado) {
-        console.log(`⏭️ Pedido ${pedido.codigo} já processado, ignorando`);
-        return;
+// ==============================
+// MONITORAMENTO DE PEDIDOS (NOVOS E ATUALIZADOS)
+// ==============================
+async function monitorarPedidos() {
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos (novos e atualizações)...`);
+    try {
+        // Buscar pedidos com status 'emitida' que foram criados ou atualizados nos últimos 10 minutos
+        const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&or=(created_at.gte.${dezMinutosAtras},updated_at.gte.${dezMinutosAtras})`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            console.error('Erro ao buscar pedidos');
+            return;
+        }
+
+        const pedidos = await response.json();
+        if (pedidos.length === 0) {
+            console.log('📭 Nenhum pedido novo ou atualizado encontrado');
+            return;
+        }
+
+        console.log(`📦 ${pedidos.length} pedido(s) encontrado(s)`);
+        for (const pedido of pedidos) {
+            await criarOuAtualizarRegistro(pedido);
+        }
+    } catch (error) {
+        console.error('❌ Erro no monitoramento:', error);
     }
-    await criarRegistroLucroReal(pedido);
 }
 
 // ==============================
-// CARGA INICIAL
+// CARGA INICIAL (TODOS OS PEDIDOS EMITIDOS)
 // ==============================
 async function carregarTodosPedidosEmitidos() {
     console.log('🔄 Iniciando carga inicial de todos os pedidos emitidos...');
@@ -206,52 +260,14 @@ async function carregarTodosPedidosEmitidos() {
         const pedidos = await response.json();
         console.log(`📦 Encontrados ${pedidos.length} pedidos emitidos no total`);
 
-        let processados = 0, ignorados = 0;
+        let processados = 0;
         for (const pedido of pedidos) {
-            const jaProcessado = await pedidoJaProcessado(pedido.codigo);
-            if (jaProcessado) ignorados++;
-            else if (await criarRegistroLucroReal(pedido)) processados++;
+            const success = await criarOuAtualizarRegistro(pedido);
+            if (success) processados++;
         }
-        console.log(`✅ Carga inicial: ${processados} novos, ${ignorados} já existentes`);
+        console.log(`✅ Carga inicial concluída: ${processados} registros processados`);
     } catch (error) {
         console.error('❌ Erro na carga inicial:', error);
-    }
-}
-
-// ==============================
-// MONITORAMENTO DE NOVOS PEDIDOS
-// ==============================
-async function monitorarPedidosEmitidos() {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando novos pedidos emitidos...`);
-    try {
-        const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&updated_at=gte.${dezMinutosAtras}`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
-            }
-        );
-
-        if (!response.ok) {
-            console.error('Erro ao buscar pedidos emitidos');
-            return;
-        }
-
-        const pedidos = await response.json();
-        if (pedidos.length === 0) {
-            console.log('📭 Nenhum novo pedido encontrado');
-            return;
-        }
-
-        console.log(`📦 ${pedidos.length} novo(s) pedido(s) encontrado(s)`);
-        for (const pedido of pedidos) {
-            await processarPedidoEmitido(pedido);
-        }
-    } catch (error) {
-        console.error('❌ Erro no monitoramento:', error);
     }
 }
 
@@ -335,7 +351,7 @@ app.get('/api/carga-inicial', async (req, res) => {
 });
 
 app.get('/api/monitorar-pedidos', async (req, res) => {
-    await monitorarPedidosEmitidos();
+    await monitorarPedidos();
     res.json({ success: true });
 });
 
@@ -442,8 +458,8 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 // INICIAR SERVIDOR
 // ==============================
 setTimeout(carregarTodosPedidosEmitidos, 5000);
-setInterval(monitorarPedidosEmitidos, 2 * 60 * 1000);
-setTimeout(monitorarPedidosEmitidos, 10000);
+setInterval(monitorarPedidos, 2 * 60 * 1000); // a cada 2 minutos
+setTimeout(monitorarPedidos, 10000);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
@@ -454,6 +470,6 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
     console.log('📦 Supabase conectado');
-    console.log('💰 Monitorando pedidos_faturamento');
+    console.log('💰 Monitorando pedidos_faturamento (novos e atualizações)');
     console.log('🔄 Carga inicial de TODOS os pedidos emitidos');
 });
