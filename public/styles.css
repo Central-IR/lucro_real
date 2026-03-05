@@ -525,6 +525,16 @@ h1 {
     font-weight: 500;
 }
 
+/* DASHBOARD CORES ESPECÍFICAS (AJUSTES) */
+.stat-card .stat-value#totalCusto {
+    color: #EF4444 !important;
+    font-weight: 700;
+}
+
+.stat-card .stat-value#totalImposto {
+    color: #EF4444 !important;
+}
+
 /* TABELA PRINCIPAL */
 table {
     width: 100%;
@@ -570,6 +580,22 @@ tbody tr:hover {
 
 tbody tr:active {
     opacity: 0.8;
+}
+
+/* CORES DAS COLUNAS DA TABELA */
+#lucroContainer td:nth-child(4) { /* CUSTO */
+    color: #EF4444 !important;
+    font-weight: 700;
+}
+
+#lucroContainer td:nth-child(7) { /* IMP FED */
+    color: #EF4444 !important;
+    font-weight: 700;
+}
+
+#lucroContainer td:nth-child(9) { /* MARGEM LÍQ. */
+    color: inherit !important;
+    font-weight: normal !important;
 }
 
 /* FORMULÁRIOS */
@@ -820,6 +846,11 @@ button.small {
     transition: color 0.2s ease;
 }
 
+/* RELATÓRIO: FRETE EM AZUL */
+#relatorioBody span[style*="color:#3B82F6"] {
+    /* já inline, mas garantimos a cor */
+}
+
 /* RESPONSIVIDADE */
 @media (max-width: 768px) {
     .container {
@@ -899,32 +930,4 @@ button.small {
     .modal-actions button {
         width: 100%;
     }
-}
-
-/* Ajustes de cor para os dashboards */
-#totalCusto, #totalImposto {
-    color: #EF4444 !important;
-    font-weight: 700;
-}
-
-/* Custo na tabela em verde */
-#lucroContainer td:nth-child(4) {
-    color: #22C55E !important;
-    font-weight: 700;
-}
-
-/* Imp Fed na tabela em vermelho */
-#lucroContainer td:nth-child(7) {
-    color: #EF4444 !important;
-}
-
-/* Margem Líquida sem cor especial */
-#lucroContainer td:nth-child(9) {
-    color: inherit;
-    font-weight: normal;
-}
-
-/* Caixa alta apenas na tabela */
-#lucroContainer td {
-    text-transform: uppercase;
 }
