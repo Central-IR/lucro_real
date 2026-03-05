@@ -144,7 +144,7 @@ async function loadLucroReal() {
         const data = await response.json();
         if (mes !== currentMonth.getMonth() || ano !== currentMonth.getFullYear()) return;
 
-        lucroData = data; // já ordenado por data_emissao.asc pelo backend
+        lucroData = data;
         isOnline = true;
         updateConnectionStatus();
         lastDataHash = JSON.stringify(lucroData.map(r => r.id));
@@ -256,20 +256,38 @@ function updateTable() {
         filtered = filtered.filter(r => (r.vendedor || '') === filterVendedor);
     }
 
-    // Ordenar por data de emissão (crescente)
-    filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
+    // Ordenar por NF (crescente, considerando string)
+    filtered.sort((a, b) => {
+        const nfA = (a.nf || '').padStart(10, '0');
+        const nfB = (b.nf || '').padStart(10, '0');
+        return nfA.localeCompare(nfB);
+    });
 
     if (filtered.length === 0) {
         container.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">Nenhum registro encontrado</td></tr>';
         return;
     }
 
-    container.innerHTML = filtered.map(r => {
+    let lastMonthYear = null;
+    let html = '';
+
+    filtered.forEach(r => {
+        const data = new Date(r.data_emissao + 'T00:00:00');
+        const mesAno = `${data.getMonth()+1}/${data.getFullYear()}`;
+        if (mesAno !== lastMonthYear) {
+            if (lastMonthYear !== null) {
+                const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                const nomeMes = monthNames[data.getMonth()];
+                html += `<tr class="month-separator"><td colspan="9" style="background: var(--th-bg); color: var(--th-color); font-weight: bold; padding: 8px; text-align: center;">${nomeMes} ${data.getFullYear()}</td></tr>`;
+            }
+            lastMonthYear = mesAno;
+        }
+
         const lucroReal = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
         const margem = r.venda ? (lucroReal / r.venda) * 100 : 0;
         const lucroClass = lucroReal >= 0 ? 'stat-value-success' : 'stat-value-danger';
         
-        return `
+        html += `
         <tr onclick="abrirEditModal('${r.codigo}')">
             <td>${(r.nf || '-').toUpperCase()}</td>
             <td>${(r.vendedor || '-').toUpperCase()}</td>
@@ -281,7 +299,9 @@ function updateTable() {
             <td style="font-weight: 700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
             <td>${margem.toFixed(2)}%</td>
         </tr>`;
-    }).join('');
+    });
+
+    container.innerHTML = html;
 }
 
 // ============================================
@@ -372,7 +392,7 @@ async function saveEditModal() {
 }
 
 // ============================================
-// RELATÓRIO ANUAL
+// RELATÓRIO ANUAL (mesmo código anterior, apenas ajuste nos nomes)
 // ============================================
 function openRelatorioAnualModal() {
     relatorioAno = new Date().getFullYear();
@@ -415,7 +435,7 @@ async function renderRelatorio() {
         }));
 
         dadosAno.forEach(r => {
-            const data = new Date(r.data_emissao);
+            const data = new Date(r.data_emissao + 'T00:00:00');
             const mes = data.getMonth();
             const venda = r.venda || 0;
             const lucro = (venda - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0));
@@ -443,7 +463,6 @@ async function renderRelatorio() {
             const lucroBruto = m.lucroTotal - m.custoTotal;
             const lucroBrutoClass = lucroBruto >= 0 ? 'stat-value-success' : 'stat-value-danger';
             
-            // Tendência em relação ao mês anterior
             let tendencia = '';
             if (mesIndex > 0) {
                 const mesAnt = meses[mesIndex - 1];
@@ -472,7 +491,6 @@ async function renderRelatorio() {
 
         html += '</div>';
 
-        // Paginação
         html += `
             <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
                 <button onclick="changeRelatorioPagina(-1)" ${relatorioPagina === 1 ? 'disabled' : ''} 
@@ -483,7 +501,6 @@ async function renderRelatorio() {
             </div>
         `;
 
-        // Totais anuais em cards
         const totalVendaAno = meses.reduce((acc, m) => acc + m.vendaTotal, 0);
         const totalFreteAno = meses.reduce((acc, m) => acc + m.freteTotal, 0);
         const totalLucroAno = meses.reduce((acc, m) => acc + m.lucroTotal, 0);
