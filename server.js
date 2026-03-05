@@ -106,25 +106,6 @@ function calcularValores(pedido) {
 // ==============================
 // FUNÇÕES DE PROCESSAMENTO
 // ==============================
-async function pedidoJaProcessado(codigo) {
-    try {
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${codigo}&select=id`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
-            }
-        );
-        const data = await response.json();
-        return data.length > 0;
-    } catch (error) {
-        console.error('Erro ao verificar pedido processado:', error);
-        return false;
-    }
-}
-
 async function obterRegistroExistente(codigo) {
     try {
         const response = await fetch(
@@ -150,7 +131,6 @@ async function criarRegistroLucroReal(pedido) {
         const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // ✅ Usa APENAS o campo 'nf' do pedido. Se vazio, exibe '-'
         const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
         const registro = {
@@ -199,7 +179,6 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
         const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // ✅ Mesma lógica: usa apenas 'nf' ou '-'
         const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
         const updates = {
@@ -242,20 +221,58 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
     }
 }
 
-async function processarPedidoEmitido(pedido) {
-    const registroExistente = await obterRegistroExistente(pedido.codigo);
-    if (registroExistente) {
-        await atualizarRegistroLucroReal(pedido, registroExistente);
+async function processarPedido(pedido) {
+    const existente = await obterRegistroExistente(pedido.codigo);
+    if (existente) {
+        return await atualizarRegistroLucroReal(pedido, existente);
     } else {
-        await criarRegistroLucroReal(pedido);
+        return await criarRegistroLucroReal(pedido);
     }
 }
 
 // ==============================
-// CARGA INICIAL (todos os emitidos)
+// MONITORAMENTO CONTÍNUO (rápido)
 // ==============================
-async function carregarTodosPedidosEmitidos() {
-    console.log('🔄 Iniciando carga inicial de todos os pedidos emitidos...');
+async function verificarPedidosRecentes() {
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos recentes...`);
+    try {
+        // Busca pedidos emitidos nos últimos 5 minutos (inclui novos e atualizados)
+        const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&updated_at=gte.${cincoMinutosAtras}`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            console.error('Erro ao buscar pedidos');
+            return;
+        }
+
+        const pedidos = await response.json();
+        if (pedidos.length === 0) {
+            console.log('📭 Nenhum pedido recente encontrado');
+            return;
+        }
+
+        console.log(`📦 ${pedidos.length} pedido(s) recente(s) encontrado(s)`);
+        for (const pedido of pedidos) {
+            await processarPedido(pedido);
+        }
+    } catch (error) {
+        console.error('❌ Erro no monitoramento:', error);
+    }
+}
+
+// ==============================
+// CARGA COMPLETA (para garantir sincronia total)
+// ==============================
+async function cargaCompleta() {
+    console.log('🔄 Iniciando carga completa de todos os pedidos emitidos...');
     try {
         const response = await fetch(
             `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida`,
@@ -268,76 +285,35 @@ async function carregarTodosPedidosEmitidos() {
         );
 
         if (!response.ok) {
-            console.error('❌ Erro ao buscar pedidos emitidos para carga inicial');
+            console.error('❌ Erro na carga completa');
             return;
         }
 
         const pedidos = await response.json();
         console.log(`📦 Encontrados ${pedidos.length} pedidos emitidos no total`);
 
-        let processados = 0, ignorados = 0;
+        let processados = 0;
         for (const pedido of pedidos) {
-            const existe = await pedidoJaProcessado(pedido.codigo);
-            if (existe) {
-                ignorados++;
-            } else {
-                if (await criarRegistroLucroReal(pedido)) processados++;
-            }
+            const sucesso = await processarPedido(pedido);
+            if (sucesso) processados++;
         }
-        console.log(`✅ Carga inicial: ${processados} novos, ${ignorados} já existentes`);
+        console.log(`✅ Carga completa: ${processados} registros sincronizados`);
     } catch (error) {
-        console.error('❌ Erro na carga inicial:', error);
+        console.error('❌ Erro na carga completa:', error);
     }
 }
 
 // ==============================
-// MONITORAMENTO DE PEDIDOS (novos e atualizados)
-// ==============================
-async function monitorarPedidosEmitidos() {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos atualizados...`);
-    try {
-        const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&updated_at=gte.${dezMinutosAtras}`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
-            }
-        );
-
-        if (!response.ok) {
-            console.error('Erro ao buscar pedidos emitidos');
-            return;
-        }
-
-        const pedidos = await response.json();
-        if (pedidos.length === 0) {
-            console.log('📭 Nenhum pedido atualizado encontrado');
-            return;
-        }
-
-        console.log(`📦 ${pedidos.length} pedido(s) atualizado(s) encontrado(s)`);
-        for (const pedido of pedidos) {
-            await processarPedidoEmitido(pedido);
-        }
-    } catch (error) {
-        console.error('❌ Erro no monitoramento:', error);
-    }
-}
-
-// ==============================
-// ROTAS PARA CARGA MANUAL
+// ROTAS PARA DISPARO MANUAL
 // ==============================
 app.get('/api/carga-inicial', async (req, res) => {
-    await carregarTodosPedidosEmitidos();
-    res.json({ success: true });
+    await cargaCompleta();
+    res.json({ success: true, message: 'Carga completa executada' });
 });
 
 app.get('/api/monitorar-pedidos', async (req, res) => {
-    await monitorarPedidosEmitidos();
-    res.json({ success: true });
+    await verificarPedidosRecentes();
+    res.json({ success: true, message: 'Monitoramento rápido executado' });
 });
 
 // ==============================
@@ -445,21 +421,32 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 });
 
 // ==============================
-// INICIAR SERVIDOR
+// INICIAR MONITORAMENTO
 // ==============================
-setTimeout(carregarTodosPedidosEmitidos, 5000);
-setInterval(monitorarPedidosEmitidos, 2 * 60 * 1000);
-setTimeout(monitorarPedidosEmitidos, 10000);
+// Faz uma carga completa ao iniciar
+setTimeout(cargaCompleta, 5000);
 
+// Monitoramento rápido a cada 30 segundos
+setInterval(verificarPedidosRecentes, 30 * 1000);
+
+// Também uma varredura completa a cada 1 hora para garantir consistência
+setInterval(cargaCompleta, 60 * 60 * 1000);
+
+// ==============================
+// SERVIR FRONTEND
+// ==============================
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ==============================
+// INICIAR SERVIDOR
+// ==============================
 app.listen(PORT, () => {
     console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
     console.log('📦 Supabase conectado');
-    console.log('💰 Monitorando pedidos_faturamento (inclui atualizações)');
-    console.log('🔄 Carga inicial de TODOS os pedidos emitidos');
+    console.log('💰 Monitorando pedidos_faturamento (a cada 30s)');
+    console.log('🔄 Carga completa a cada 1 hora');
 });
