@@ -68,7 +68,7 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
     document.body.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary); color: var(--text-primary); text-align: center; padding: 2rem;">
             <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">${mensagem}</h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">SOMENTE USUÁRIOS AUTENTICADOS PODEM ACESSAR ESTA ÁREA.</p>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Somente usuários autenticados podem acessar esta área.</p>
             <a href="${PORTAL_URL}" style="display: inline-block; background: var(--btn-register); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">IR PARA O PORTAL</a>
         </div>
     `;
@@ -101,9 +101,9 @@ async function syncData() {
             headers: { 'X-Session-Token': sessionToken }
         });
         await loadLucroReal();
-        showMessage('DADOS SINCRONIZADOS', 'success');
+        showMessage('Dados sincronizados', 'success');
     } catch (error) {
-        showMessage('ERRO AO SINCRONIZAR', 'error');
+        showMessage('Erro ao sincronizar', 'error');
     } finally {
         if (btnSync) {
             btnSync.classList.remove('syncing');
@@ -144,7 +144,7 @@ async function loadLucroReal() {
         const data = await response.json();
         if (mes !== currentMonth.getMonth() || ano !== currentMonth.getFullYear()) return;
 
-        lucroData = data;
+        lucroData = data; // já ordenado por data_emissao.asc pelo backend
         isOnline = true;
         updateConnectionStatus();
         lastDataHash = JSON.stringify(lucroData.map(r => r.id));
@@ -172,8 +172,8 @@ function changeMonth(direction) {
 }
 
 function updateMonthDisplay() {
-    const months = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
-        'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const monthName = months[currentMonth.getMonth()];
     const year = currentMonth.getFullYear();
     document.getElementById('currentMonth').textContent = `${monthName} ${year}`;
@@ -225,11 +225,11 @@ function updateVendedoresFilter() {
     const vendedores = new Set(lucroData.map(r => r.vendedor).filter(Boolean));
     const select = document.getElementById('filterVendedor');
     const current = select.value;
-    select.innerHTML = '<option value="">VENDEDOR</option>';
+    select.innerHTML = '<option value="">Vendedor</option>';
     Array.from(vendedores).sort().forEach(v => {
         const option = document.createElement('option');
         option.value = v;
-        option.textContent = v.toUpperCase();
+        option.textContent = v;
         select.appendChild(option);
     });
     select.value = current;
@@ -253,13 +253,14 @@ function updateTable() {
         );
     }
     if (filterVendedor) {
-        filtered = filtered.filter(r => (r.vendedor || '').toUpperCase() === filterVendedor.toUpperCase());
+        filtered = filtered.filter(r => (r.vendedor || '').toLowerCase() === filterVendedor.toLowerCase());
     }
 
+    // Ordenar por data de emissão (já veio ordenado, mas garantimos)
     filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
 
     if (filtered.length === 0) {
-        container.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">NENHUM REGISTRO ENCONTRADO</td></tr>';
+        container.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">Nenhum registro encontrado</td></tr>';
         return;
     }
 
@@ -267,19 +268,20 @@ function updateTable() {
         const lucroReal = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
         const margem = r.venda ? (lucroReal / r.venda) * 100 : 0;
         const lucroClass = lucroReal >= 0 ? 'stat-value-success' : 'stat-value-danger';
-        const margemClass = margem >= 0 ? 'stat-value-success' : 'stat-value-danger';
+        // Margem sem cor especial e sem negrito
+        const margemStyle = '';
         
         return `
         <tr onclick="abrirEditModal('${r.codigo}')">
-            <td>${(r.nf || '-').toUpperCase()}</td>
-            <td>${(r.vendedor || '-').toUpperCase()}</td>
+            <td style="text-transform:uppercase;">${(r.nf || '-').toUpperCase()}</td>
+            <td style="text-transform:uppercase;">${(r.vendedor || '-').toUpperCase()}</td>
             <td>${formatarMoeda(r.venda)}</td>
-            <td style="font-weight:700; color:#EF4444;">${formatarMoeda(r.custo)}</td>
+            <td style="font-weight:700; color:#22C55E;">${formatarMoeda(r.custo)}</td>
             <td>${formatarMoeda(r.frete)}</td>
             <td>${formatarMoeda(r.comissao)}</td>
-            <td style="font-weight:700; color:#EF4444;">${formatarMoeda(r.imposto_federal)}</td>
+            <td style="color:#EF4444;">${formatarMoeda(r.imposto_federal)}</td>
             <td style="font-weight:700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
-            <td style="font-weight:700;" class="${margemClass}">${margem.toFixed(2)}%</td>
+            <td>${margem.toFixed(2)}%</td>
         </tr>`;
     }).join('');
 }
@@ -305,7 +307,7 @@ function showMessage(message, type = 'success') {
 }
 
 // ============================================
-// MODAL DE EDIÇÃO (um clique)
+// MODAL DE EDIÇÃO
 // ============================================
 let currentEditCodigo = null;
 
@@ -349,7 +351,11 @@ async function saveEditModal() {
             })
         });
 
-        if (!response.ok) throw new Error('Erro ao salvar');
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error('Erro no PATCH:', errText);
+            throw new Error('Erro ao salvar');
+        }
 
         const registro = lucroData.find(r => r.codigo === currentEditCodigo);
         if (registro) {
@@ -361,10 +367,10 @@ async function saveEditModal() {
         updateTable();
         updateDashboard();
         closeEditModal();
-        showMessage('VALORES ATUALIZADOS', 'success');
+        showMessage('Valores atualizados', 'success');
     } catch (error) {
         console.error(error);
-        showMessage('ERRO AO SALVAR', 'error');
+        showMessage('Erro ao salvar', 'error');
     }
 }
 
@@ -375,7 +381,7 @@ function openDiferencaModal() {
     const mes = currentMonth.getMonth();
     const ano = currentMonth.getFullYear();
     document.getElementById('diferencaMesAno').textContent = 
-        `${['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][mes]} ${ano}`;
+        `${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mes]} ${ano}`;
     
     fetch(`${API_URL}/diferencas?mes=${mes}&ano=${ano}`, {
         headers: { 'X-Session-Token': sessionToken }
@@ -409,10 +415,10 @@ async function saveDiferenca() {
             },
             body: JSON.stringify({ mes, ano, valor })
         });
-        showMessage('DIFERENÇA SALVA', 'success');
+        showMessage('Diferença salva', 'success');
         closeDiferencaModal();
     } catch (error) {
-        showMessage('ERRO AO SALVAR', 'error');
+        showMessage('Erro ao salvar', 'error');
     }
 }
 
@@ -481,8 +487,8 @@ async function renderRelatorio() {
             meses[mes].impostoTotal += r.imposto_federal || 0;
         });
 
-        const mesesNomes = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 
-                           'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+        const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                           'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
         const totalPaginas = Math.ceil(12 / mesesPorPagina);
         const inicio = (relatorioPagina - 1) * mesesPorPagina;
@@ -516,11 +522,11 @@ async function renderRelatorio() {
                         <h4 style="margin:0 0 0.5rem 0; color: var(--text-primary); font-weight:700;">${nome}</h4>
                         ${tendencia}
                     </div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Frete:</span> ${percentualFrete}%</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Frete:</span> <span style="color:#3B82F6;">${percentualFrete}%</span></div>
                     <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro:</span> ${formatarMoeda(m.lucroTotal)}</div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Custo:</span> <span style="color:#EF4444; font-weight:700;">${formatarMoeda(m.custoTotal)}</span></div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
                     <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}" style="font-weight:700;">${formatarMoeda(lucroBruto)}</span></div>
-                    <div><span style="font-weight:700;">Simples:</span> <span style="color:#EF4444; font-weight:700;">${formatarMoeda(m.impostoTotal)}</span></div>
+                    <div><span style="font-weight:700;">Simples:</span> ${formatarMoeda(m.impostoTotal)}</div>
                     <div style="margin-top:0.5rem; font-size:0.9rem;"><span style="font-weight:700;">Diferença:</span> ${formatarMoeda(diffs[mesIndex])}</div>
                 </div>
             `;
@@ -549,7 +555,7 @@ async function renderRelatorio() {
         const lucroBrutoAnoClass = lucroBrutoAno >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
         html += `
-            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap: wrap;">
+            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap:wrap;">
                 <div class="stat-card" style="flex:1; min-width:160px;">
                     <div class="stat-icon stat-icon-default" style="background:rgba(107,114,128,0.1);">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -612,6 +618,6 @@ async function renderRelatorio() {
         document.getElementById('relatorioBody').innerHTML = html;
     } catch (error) {
         console.error('Erro ao carregar dados anuais', error);
-        document.getElementById('relatorioBody').innerHTML = '<p style="text-align:center;">ERRO AO CARREGAR DADOS.</p>';
+        document.getElementById('relatorioBody').innerHTML = '<p style="text-align:center;">Erro ao carregar dados.</p>';
     }
 }
