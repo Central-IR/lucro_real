@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 // MIDDLEWARE DE AUTENTICAÇÃO
 // ==============================
 async function verificarAutenticacao(req, res, next) {
-    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos'];
+    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial'];
 
     if (publicPaths.includes(req.path)) {
         return next();
@@ -110,7 +110,7 @@ function calcularValores(pedido) {
 }
 
 // ==============================
-// MONITORAMENTO DE PEDIDOS EMITIDOS
+// FUNÇÕES DE PROCESSAMENTO
 // ==============================
 
 // Função para verificar se um pedido já existe no lucro_real
@@ -189,7 +189,54 @@ async function processarPedidoEmitido(pedido) {
     await criarRegistroLucroReal(pedido);
 }
 
-// Função principal de monitoramento
+// ==============================
+// CARGA INICIAL - TODOS OS PEDIDOS EMITIDOS
+// ==============================
+async function carregarTodosPedidosEmitidos() {
+    console.log('🔄 Iniciando carga inicial de todos os pedidos emitidos...');
+    
+    try {
+        // Buscar TODOS os pedidos com status 'emitida' (sem filtro de data)
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            console.error('❌ Erro ao buscar pedidos emitidos para carga inicial');
+            return;
+        }
+
+        const pedidos = await response.json();
+        console.log(`📦 Encontrados ${pedidos.length} pedidos emitidos no total`);
+
+        let processados = 0;
+        let ignorados = 0;
+
+        for (const pedido of pedidos) {
+            const jaProcessado = await pedidoJaProcessado(pedido.codigo);
+            if (jaProcessado) {
+                ignorados++;
+            } else {
+                const criado = await criarRegistroLucroReal(pedido);
+                if (criado) processados++;
+            }
+        }
+
+        console.log(`✅ Carga inicial concluída: ${processados} novos registros, ${ignorados} já existentes`);
+    } catch (error) {
+        console.error('❌ Erro na carga inicial:', error);
+    }
+}
+
+// ==============================
+// MONITORAMENTO DE NOVOS PEDIDOS EMITIDOS
+// ==============================
 async function monitorarPedidosEmitidos() {
     console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando novos pedidos emitidos...`);
     
@@ -228,6 +275,14 @@ async function monitorarPedidosEmitidos() {
         console.error('❌ Erro no monitoramento:', error);
     }
 }
+
+// ==============================
+// ROTA PARA EXECUTAR CARGA INICIAL MANUALMENTE
+// ==============================
+app.get('/api/carga-inicial', async (req, res) => {
+    await carregarTodosPedidosEmitidos();
+    res.json({ success: true, message: 'Carga inicial executada' });
+});
 
 // ==============================
 // ROTA PARA EXECUTAR MONITORAMENTO MANUALMENTE
@@ -356,12 +411,17 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 });
 
 // ==============================
-// INICIAR MONITORAMENTO AUTOMÁTICO
+// INICIAR CARGA INICIAL E MONITORAMENTO
 // ==============================
-// Executar a cada 2 minutos
+// Executar carga inicial após 5 segundos (tempo para o servidor iniciar)
+setTimeout(() => {
+    carregarTodosPedidosEmitidos();
+}, 5000);
+
+// Executar monitoramento a cada 2 minutos
 setInterval(monitorarPedidosEmitidos, 2 * 60 * 1000);
 
-// Executar primeira vez após 10 segundos
+// Executar monitoramento primeira vez após 10 segundos
 setTimeout(monitorarPedidosEmitidos, 10000);
 
 // ==============================
@@ -382,5 +442,6 @@ app.listen(PORT, () => {
     console.log('📦 Supabase conectado com Service Role');
     console.log('💰 Monitorando tabela: pedidos_faturamento');
     console.log('📊 Alimentando tabela: lucro_real');
-    console.log('⏱️  Monitoramento a cada 2 minutos');
+    console.log('🔄 Carga inicial de TODOS os pedidos emitidos agendada');
+    console.log('⏱️  Monitoramento de novos pedidos a cada 2 minutos');
 });
