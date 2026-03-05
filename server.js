@@ -37,6 +37,7 @@ async function verificarAutenticacao(req, res, next) {
         '/',
         '/api/health',
         '/api/test/todos-fretes',
+        '/api/test/frete/:id',
         '/api/debug/fretes',
         '/api/debug/lucro-real',
         '/api/carga-inicial',
@@ -88,6 +89,20 @@ app.get('/api/test/todos-fretes', async (req, res) => {
     }
 });
 
+// ROTA DE TESTE PARA UM FRETE ESPECÍFICO
+app.get('/api/test/frete/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?id=eq.${id}`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        const data = await response.json();
+        res.json(data[0] || null);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Funções auxiliares
 function parseValorMonetario(valor) {
     if (!valor) return 0;
@@ -118,8 +133,10 @@ async function criarRegistroLucroReal(frete) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // Copia o valor do frete do Controle de Frete
+        // 🔧 Copia o valor do frete do Controle de Frete
         const freteValor = parseValorMonetario(frete.valor_frete);
+        console.log(`📊 frete.id=${frete.id}, venda=${venda}, freteValor=${freteValor}, comissao=${comissao}, impostoFederal=${impostoFederal}`);
+
         const lucroReal = venda - freteValor - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
@@ -178,10 +195,10 @@ async function atualizarRegistroLucroReal(frete, existente) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // Mantém custo e frete manuais (não altera valores já editados)
+        // 🔧 Atualiza o frete também (para refletir mudanças no controle_frete)
+        const freteValor = parseValorMonetario(frete.valor_frete);
         const custoAtual = existente.custo || 0;
-        const freteAtual = existente.frete || 0;
-        const lucroReal = venda - custoAtual - freteAtual - comissao - impostoFederal;
+        const lucroReal = venda - custoAtual - freteValor - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
         const numeroNF = frete.numero_nf && frete.numero_nf.trim() !== '' ? frete.numero_nf : '-';
@@ -191,12 +208,15 @@ async function atualizarRegistroLucroReal(frete, existente) {
             nf: numeroNF,
             vendedor: frete.vendedor || '',
             venda: venda,
+            frete: freteValor,   // 🔥 agora atualiza o frete!
             comissao: comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
             data_emissao: dataEmissao
         };
+
+        console.log('📤 Atualizando registro no lucro_real:', JSON.stringify(updates));
 
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${frete.id}`, {
             method: 'PATCH',
@@ -224,19 +244,15 @@ async function atualizarRegistroLucroReal(frete, existente) {
 
 // 🔍 Função para verificar se o tipo_nf deve ser processado (apenas ENVIO)
 function deveProcessarFrete(frete) {
-    // Se não tiver tipo, considera ENVIO
     const tipo = frete.tipo_nf || 'ENVIO';
-    // Tipos que NÃO devem ser processados
-    const tiposIgnorar = ['DEVOLUCAO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA', 'CANCELADA'];
-    return tipo === 'ENVIO' || !tiposIgnorar.includes(tipo); // Na verdade queremos apenas ENVIO
-    // Corrigindo: queremos apenas ENVIO, então:
+    // Apenas ENVIO deve ser processado
     return tipo === 'ENVIO';
 }
 
 async function processarFrete(frete) {
     if (!deveProcessarFrete(frete)) {
         console.log(`⏭️ Ignorando frete ${frete.id} (tipo: ${frete.tipo_nf})`);
-        return true; // ignorado, mas considerado processado para não gerar erro
+        return true;
     }
 
     console.log(`⚙️ Processando frete ${frete.id} (NF: ${frete.numero_nf || '-'})`);
