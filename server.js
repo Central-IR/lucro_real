@@ -82,6 +82,7 @@ app.get('/api/health', (req, res) => {
 // ==============================
 function parseValorMonetario(valor) {
     if (!valor) return 0;
+    // Remove 'R$', pontos de milhar e substitui vírgula por ponto
     const cleaned = String(valor)
         .replace('R$', '')
         .replace(/\./g, '')
@@ -128,9 +129,10 @@ async function obterRegistroExistente(codigo) {
 async function criarRegistroLucroReal(pedido) {
     try {
         const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
-        const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
+        const lucroReal = venda - frete - comissao - impostoFederal; // custo inicial 0
         const margemLiquida = venda ? lucroReal / venda : 0;
 
+        // Define a NF: se existir campo 'nf' no pedido, usa; senão, '-'
         const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
         const registro = {
@@ -144,7 +146,7 @@ async function criarRegistroLucroReal(pedido) {
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
-            data_emissao: pedido.data_emissao || new Date().toISOString().split('T')[0]
+            data_emissao: pedido.data_emissao || pedido.data_registro || new Date().toISOString().split('T')[0]
         };
 
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
@@ -175,6 +177,7 @@ async function criarRegistroLucroReal(pedido) {
 async function atualizarRegistroLucroReal(pedido, registroExistente) {
     try {
         const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
+        // Preserva o custo manual existente
         const custoAtual = registroExistente.custo || 0;
         const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
@@ -190,7 +193,7 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
-            data_emissao: pedido.data_emissao || registroExistente.data_emissao
+            data_emissao: pedido.data_emissao || pedido.data_registro || registroExistente.data_emissao
         };
 
         const response = await fetch(
@@ -222,7 +225,7 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
 }
 
 async function processarPedido(pedido) {
-    console.log(`Processando pedido ${pedido.codigo} (NF: ${pedido.nf})`);
+    console.log(`Processando pedido ${pedido.codigo} (NF: ${pedido.nf || '-'})`);
     const existente = await obterRegistroExistente(pedido.codigo);
     if (existente) {
         return await atualizarRegistroLucroReal(pedido, existente);
@@ -235,12 +238,12 @@ async function processarPedido(pedido) {
 // MONITORAMENTO CONTÍNUO (rápido)
 // ==============================
 async function verificarPedidosRecentes() {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos recentes...`);
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos atualizados recentemente...`);
     try {
-        // Busca pedidos emitidos nos últimos 5 minutos
-        const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        // Busca pedidos que foram criados ou atualizados nos últimos 2 minutos
+        const doisMinutosAtras = new Date(Date.now() - 2 * 60 * 1000).toISOString();
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&updated_at=gte.${cincoMinutosAtras}`,
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&updated_at=gte.${doisMinutosAtras}&order=updated_at.desc`,
             {
                 headers: {
                     apikey: SUPABASE_KEY,
@@ -270,13 +273,13 @@ async function verificarPedidosRecentes() {
 }
 
 // ==============================
-// CARGA COMPLETA
+// CARGA COMPLETA (todos os pedidos)
 // ==============================
 async function cargaCompleta() {
-    console.log('🔄 Iniciando carga completa de todos os pedidos emitidos...');
+    console.log('🔄 Iniciando carga completa de todos os pedidos...');
     try {
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida`,
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&order=codigo.asc`,
             {
                 headers: {
                     apikey: SUPABASE_KEY,
@@ -291,7 +294,7 @@ async function cargaCompleta() {
         }
 
         const pedidos = await response.json();
-        console.log(`📦 Encontrados ${pedidos.length} pedidos emitidos no total`);
+        console.log(`📦 Encontrados ${pedidos.length} pedidos no total`);
 
         let processados = 0;
         for (const pedido of pedidos) {
@@ -310,7 +313,7 @@ async function cargaCompleta() {
 app.get('/api/debug/pedidos', async (req, res) => {
     try {
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo,nf,documento,status,updated_at&status=eq.emitida&order=updated_at.desc&limit=20`,
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo,nf,documento,status,updated_at&order=updated_at.desc&limit=20`,
             {
                 headers: {
                     apikey: SUPABASE_KEY,
@@ -445,17 +448,17 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 // ==============================
 // INICIAR MONITORAMENTO
 // ==============================
-// Faz uma carga completa ao iniciar
+// Faz uma carga completa ao iniciar (após 5 segundos)
 setTimeout(() => {
     console.log('⏳ Executando carga inicial...');
     cargaCompleta();
 }, 5000);
 
-// Monitoramento rápido a cada 30 segundos
-setInterval(verificarPedidosRecentes, 30 * 1000);
+// Monitoramento rápido a cada 15 segundos (para atualizações quase em tempo real)
+setInterval(verificarPedidosRecentes, 15 * 1000);
 
-// Também uma varredura completa a cada 1 hora
-setInterval(cargaCompleta, 60 * 60 * 1000);
+// Também uma varredura completa a cada 30 minutos para garantir consistência
+setInterval(cargaCompleta, 30 * 60 * 1000);
 
 // ==============================
 // SERVIR FRONTEND
@@ -472,7 +475,8 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
     console.log('📦 Supabase conectado');
-    console.log('💰 Monitorando pedidos_faturamento (a cada 30s)');
-    console.log('🔄 Carga completa a cada 1 hora');
+    console.log('💰 Monitorando TODOS os pedidos (baseado no código)');
+    console.log('⏱️  Verificando atualizações a cada 15 segundos');
+    console.log('🔄 Carga completa a cada 30 minutos');
     console.log('🔍 Rota de debug: /api/debug/pedidos');
 });
