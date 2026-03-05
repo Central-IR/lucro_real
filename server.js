@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 // MIDDLEWARE DE AUTENTICAÇÃO
 // ==============================
 async function verificarAutenticacao(req, res, next) {
-    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial'];
+    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial', '/api/diferencas'];
 
     if (publicPaths.includes(req.path)) {
         return next();
@@ -82,7 +82,6 @@ app.get('/api/health', (req, res) => {
 // ==============================
 function parseValorMonetario(valor) {
     if (!valor) return 0;
-    // Remove 'R$', pontos de milhar e substitui vírgula por ponto
     const cleaned = String(valor)
         .replace('R$', '')
         .replace(/\./g, '')
@@ -112,8 +111,6 @@ function calcularValores(pedido) {
 // ==============================
 // FUNÇÕES DE PROCESSAMENTO
 // ==============================
-
-// Função para verificar se um pedido já existe no lucro_real
 async function pedidoJaProcessado(codigo) {
     try {
         const response = await fetch(
@@ -133,16 +130,16 @@ async function pedidoJaProcessado(codigo) {
     }
 }
 
-// Função para criar registro no lucro_real
 async function criarRegistroLucroReal(pedido) {
     try {
         const { venda, frete, comissao, impostoFederal, lucroReal, margemLiquida } = calcularValores(pedido);
 
         const registro = {
             codigo: pedido.codigo,
+            nf: pedido.documento || '-',
             vendedor: pedido.vendedor || pedido.responsavel || '',
             venda: venda,
-            custo: 0, // Valor inicial, será editável depois
+            custo: 0,
             frete: frete,
             comissao: comissao,
             imposto_federal: impostoFederal,
@@ -168,7 +165,7 @@ async function criarRegistroLucroReal(pedido) {
             return false;
         }
 
-        console.log(`✅ Registro criado para pedido ${pedido.codigo}`);
+        console.log(`✅ Registro criado para pedido ${pedido.codigo} (NF: ${pedido.documento || '-'})`);
         return true;
     } catch (error) {
         console.error('Erro ao criar registro:', error);
@@ -176,27 +173,21 @@ async function criarRegistroLucroReal(pedido) {
     }
 }
 
-// Função para processar um pedido emitido
 async function processarPedidoEmitido(pedido) {
-    // Verificar se já foi processado
     const jaProcessado = await pedidoJaProcessado(pedido.codigo);
     if (jaProcessado) {
         console.log(`⏭️ Pedido ${pedido.codigo} já processado, ignorando`);
         return;
     }
-
-    // Criar registro
     await criarRegistroLucroReal(pedido);
 }
 
 // ==============================
-// CARGA INICIAL - TODOS OS PEDIDOS EMITIDOS
+// CARGA INICIAL
 // ==============================
 async function carregarTodosPedidosEmitidos() {
     console.log('🔄 Iniciando carga inicial de todos os pedidos emitidos...');
-    
     try {
-        // Buscar TODOS os pedidos com status 'emitida' (sem filtro de data)
         const response = await fetch(
             `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida`,
             {
@@ -215,35 +206,25 @@ async function carregarTodosPedidosEmitidos() {
         const pedidos = await response.json();
         console.log(`📦 Encontrados ${pedidos.length} pedidos emitidos no total`);
 
-        let processados = 0;
-        let ignorados = 0;
-
+        let processados = 0, ignorados = 0;
         for (const pedido of pedidos) {
             const jaProcessado = await pedidoJaProcessado(pedido.codigo);
-            if (jaProcessado) {
-                ignorados++;
-            } else {
-                const criado = await criarRegistroLucroReal(pedido);
-                if (criado) processados++;
-            }
+            if (jaProcessado) ignorados++;
+            else if (await criarRegistroLucroReal(pedido)) processados++;
         }
-
-        console.log(`✅ Carga inicial concluída: ${processados} novos registros, ${ignorados} já existentes`);
+        console.log(`✅ Carga inicial: ${processados} novos, ${ignorados} já existentes`);
     } catch (error) {
         console.error('❌ Erro na carga inicial:', error);
     }
 }
 
 // ==============================
-// MONITORAMENTO DE NOVOS PEDIDOS EMITIDOS
+// MONITORAMENTO DE NOVOS PEDIDOS
 // ==============================
 async function monitorarPedidosEmitidos() {
     console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando novos pedidos emitidos...`);
-    
     try {
-        // Buscar pedidos emitidos nos últimos 10 minutos
         const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        
         const response = await fetch(
             `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&updated_at=gte.${dezMinutosAtras}`,
             {
@@ -260,14 +241,12 @@ async function monitorarPedidosEmitidos() {
         }
 
         const pedidos = await response.json();
-        
         if (pedidos.length === 0) {
             console.log('📭 Nenhum novo pedido encontrado');
             return;
         }
 
         console.log(`📦 ${pedidos.length} novo(s) pedido(s) encontrado(s)`);
-        
         for (const pedido of pedidos) {
             await processarPedidoEmitido(pedido);
         }
@@ -277,32 +256,96 @@ async function monitorarPedidosEmitidos() {
 }
 
 // ==============================
-// ROTA PARA EXECUTAR CARGA INICIAL MANUALMENTE
+// ROTAS PARA DIFERENÇAS MENSAIS
 // ==============================
-app.get('/api/carga-inicial', async (req, res) => {
-    await carregarTodosPedidosEmitidos();
-    res.json({ success: true, message: 'Carga inicial executada' });
+app.get('/api/diferencas', async (req, res) => {
+    const { mes, ano } = req.query;
+    if (!mes || !ano) return res.status(400).json({ error: 'Mês e ano obrigatórios' });
+    try {
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/diferencas_mensais?mes=eq.${mes}&ano=eq.${ano}`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+        const data = await response.json();
+        res.json(data[0] || { valor: 0 });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/diferencas', async (req, res) => {
+    const { mes, ano, valor } = req.body;
+    if (!mes || !ano || valor === undefined) return res.status(400).json({ error: 'Campos incompletos' });
+    try {
+        const check = await fetch(
+            `${SUPABASE_URL}/rest/v1/diferencas_mensais?mes=eq.${mes}&ano=eq.${ano}`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+        const existente = await check.json();
+        let response;
+        if (existente.length > 0) {
+            response = await fetch(
+                `${SUPABASE_URL}/rest/v1/diferencas_mensais?mes=eq.${mes}&ano=eq.${ano}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: SUPABASE_KEY,
+                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        Prefer: 'return=representation'
+                    },
+                    body: JSON.stringify({ valor })
+                }
+            );
+        } else {
+            response = await fetch(`${SUPABASE_URL}/rest/v1/diferencas_mensais`, {
+                method: 'POST',
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    Prefer: 'return=representation'
+                },
+                body: JSON.stringify({ mes, ano, valor })
+            });
+        }
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // ==============================
-// ROTA PARA EXECUTAR MONITORAMENTO MANUALMENTE
+// ROTAS PARA CARGA MANUAL
 // ==============================
+app.get('/api/carga-inicial', async (req, res) => {
+    await carregarTodosPedidosEmitidos();
+    res.json({ success: true });
+});
+
 app.get('/api/monitorar-pedidos', async (req, res) => {
     await monitorarPedidosEmitidos();
-    res.json({ success: true, message: 'Monitoramento executado' });
+    res.json({ success: true });
 });
 
 // ==============================
 // ROTAS PROTEGIDAS – LUCRO REAL
 // ==============================
-
-// GET /api/lucro-real - listar registros do mês/ano
 app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     try {
         const { mes, ano } = req.query;
-        
         let supabaseUrl;
-        
         if (mes !== undefined && ano !== undefined) {
             const month = parseInt(mes);
             const year = parseInt(ano);
@@ -310,7 +353,6 @@ app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
             const endDate = new Date(year, month + 1, 0);
             const startStr = startDate.toISOString().split('T')[0];
             const endStr = endDate.toISOString().split('T')[0];
-            
             supabaseUrl = `${SUPABASE_URL}/rest/v1/lucro_real?select=*&data_emissao=gte.${startStr}&data_emissao=lte.${endStr}&order=data_emissao.asc`;
         } else if (ano !== undefined) {
             const year = parseInt(ano);
@@ -318,7 +360,6 @@ app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
             const endDate = new Date(year, 11, 31);
             const startStr = startDate.toISOString().split('T')[0];
             const endStr = endDate.toISOString().split('T')[0];
-            
             supabaseUrl = `${SUPABASE_URL}/rest/v1/lucro_real?select=*&data_emissao=gte.${startStr}&data_emissao=lte.${endStr}`;
         } else {
             return res.status(400).json({ error: 'Mês/ano ou ano são obrigatórios' });
@@ -345,10 +386,8 @@ app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
     }
 });
 
-// PATCH /api/lucro-real/:codigo - atualizar (custo, comissão, imposto)
 app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => {
     try {
-        // Buscar o registro atual para recalcular lucro_real e margem
         const getResponse = await fetch(
             `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${req.params.codigo}`,
             {
@@ -359,27 +398,19 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
             }
         );
 
-        if (!getResponse.ok) {
-            throw new Error('Erro ao buscar registro');
-        }
-
+        if (!getResponse.ok) throw new Error('Erro ao buscar registro');
         const registros = await getResponse.json();
-        if (registros.length === 0) {
-            return res.status(404).json({ error: 'Registro não encontrado' });
-        }
+        if (registros.length === 0) return res.status(404).json({ error: 'Registro não encontrado' });
 
         const registro = registros[0];
-        
-        // Atualizar apenas os campos permitidos
         const updates = {};
         if (req.body.custo !== undefined) updates.custo = req.body.custo;
         if (req.body.comissao !== undefined) updates.comissao = req.body.comissao;
         if (req.body.imposto_federal !== undefined) updates.imposto_federal = req.body.imposto_federal;
 
-        // Recalcular lucro_real e margem_liquida
-        const novoCusto = updates.custo !== undefined ? updates.custo : registro.custo;
-        const novaComissao = updates.comissao !== undefined ? updates.comissao : registro.comissao;
-        const novoImposto = updates.imposto_federal !== undefined ? updates.imposto_federal : registro.imposto_federal;
+        const novoCusto = updates.custo ?? registro.custo;
+        const novaComissao = updates.comissao ?? registro.comissao;
+        const novoImposto = updates.imposto_federal ?? registro.imposto_federal;
 
         updates.lucro_real = registro.venda - novoCusto - registro.frete - novaComissao - novoImposto;
         updates.margem_liquida = registro.venda ? updates.lucro_real / registro.venda : 0;
@@ -398,10 +429,7 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
             }
         );
 
-        if (!response.ok) {
-            throw new Error('Erro ao atualizar lucro real');
-        }
-
+        if (!response.ok) throw new Error('Erro ao atualizar lucro real');
         const data = await response.json();
         res.json(data);
     } catch (error) {
@@ -411,37 +439,21 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 });
 
 // ==============================
-// INICIAR CARGA INICIAL E MONITORAMENTO
+// INICIAR SERVIDOR
 // ==============================
-// Executar carga inicial após 5 segundos (tempo para o servidor iniciar)
-setTimeout(() => {
-    carregarTodosPedidosEmitidos();
-}, 5000);
-
-// Executar monitoramento a cada 2 minutos
+setTimeout(carregarTodosPedidosEmitidos, 5000);
 setInterval(monitorarPedidosEmitidos, 2 * 60 * 1000);
-
-// Executar monitoramento primeira vez após 10 segundos
 setTimeout(monitorarPedidosEmitidos, 10000);
 
-// ==============================
-// SERVIR FRONTEND
-// ==============================
 app.use(express.static(path.join(__dirname, 'public')));
-
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ==============================
-// INICIAR SERVIDOR
-// ==============================
 app.listen(PORT, () => {
     console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
-    console.log('📦 Supabase conectado com Service Role');
-    console.log('💰 Monitorando tabela: pedidos_faturamento');
-    console.log('📊 Alimentando tabela: lucro_real');
-    console.log('🔄 Carga inicial de TODOS os pedidos emitidos agendada');
-    console.log('⏱️  Monitoramento de novos pedidos a cada 2 minutos');
+    console.log('📦 Supabase conectado');
+    console.log('💰 Monitorando pedidos_faturamento');
+    console.log('🔄 Carga inicial de TODOS os pedidos emitidos');
 });
