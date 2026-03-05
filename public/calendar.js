@@ -30,9 +30,9 @@ function renderCalendar() {
     yearElement.textContent = calendarYear;
     
     const monthNames = [
-        'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 
-        'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 
-        'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 
+        'Maio', 'Junho', 'Julho', 'Agosto', 
+        'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ];
     
     monthsContainer.innerHTML = '';
