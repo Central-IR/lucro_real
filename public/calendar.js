@@ -1,4 +1,9 @@
+// ============================================
+// CALENDAR MODAL FUNCTIONALITY
+// Lucro Real - Month Navigation
+// ============================================
 
+// calendarYear está declarado no script.js
 
 function toggleCalendar() {
     const modal = document.getElementById('calendarModal');
@@ -25,9 +30,9 @@ function renderCalendar() {
     yearElement.textContent = calendarYear;
     
     const monthNames = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 
-        'Maio', 'Junho', 'Julho', 'Agosto', 
-        'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 
+        'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 
+        'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
     ];
     
     monthsContainer.innerHTML = '';
@@ -37,7 +42,6 @@ function renderCalendar() {
         monthButton.className = 'calendar-month';
         monthButton.textContent = name;
         
-        // Marcar o mês atual
         if (calendarYear === currentMonth.getFullYear() && index === currentMonth.getMonth()) {
             monthButton.classList.add('current');
         }
@@ -51,9 +55,9 @@ function selectMonth(monthIndex) {
     currentMonth = new Date(calendarYear, monthIndex, 1);
     updateDisplay();
     toggleCalendar();
+    loadLucroReal();
 }
 
-// Fechar o calendário ao clicar fora dele
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('calendarModal');
     if (modal) {
