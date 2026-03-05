@@ -900,3 +900,31 @@ button.small {
         width: 100%;
     }
 }
+
+/* Ajustes de cor para os dashboards */
+#totalCusto, #totalImposto {
+    color: #EF4444 !important;
+    font-weight: 700;
+}
+
+/* Custo na tabela em verde */
+#lucroContainer td:nth-child(4) {
+    color: #22C55E !important;
+    font-weight: 700;
+}
+
+/* Imp Fed na tabela em vermelho */
+#lucroContainer td:nth-child(7) {
+    color: #EF4444 !important;
+}
+
+/* Margem Líquida sem cor especial */
+#lucroContainer td:nth-child(9) {
+    color: inherit;
+    font-weight: normal;
+}
+
+/* Caixa alta apenas na tabela */
+#lucroContainer td {
+    text-transform: uppercase;
+}
