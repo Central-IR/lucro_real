@@ -28,7 +28,14 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 // MIDDLEWARE DE AUTENTICAÇÃO
 // ==============================
 async function verificarAutenticacao(req, res, next) {
-    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial', '/api/debug/pedidos'];
+    const publicPaths = [
+        '/',
+        '/api/health',
+        '/api/monitorar-pedidos',
+        '/api/carga-inicial',
+        '/api/debug/pedidos',
+        '/api/debug/lucro-real'
+    ];
 
     if (publicPaths.includes(req.path)) {
         return next();
@@ -129,11 +136,21 @@ async function obterRegistroExistente(codigo) {
 async function criarRegistroLucroReal(pedido) {
     try {
         const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
-        const lucroReal = venda - frete - comissao - impostoFederal; // custo inicial 0
+        // Custo inicial é 0 (será editado manualmente depois)
+        const lucroReal = venda - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // Define a NF: se existir campo 'nf' no pedido, usa; senão, '-'
+        // Campo NF: usa o campo 'nf' do pedido; se vazio, exibe '-'
         const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
+
+        // Data de emissão: prioriza data_emissao, depois data_registro, senão a data atual
+        let dataEmissao = pedido.data_emissao || pedido.data_registro;
+        if (dataEmissao) {
+            // Se for string ISO, pega só a parte da data
+            dataEmissao = dataEmissao.split('T')[0];
+        } else {
+            dataEmissao = new Date().toISOString().split('T')[0];
+        }
 
         const registro = {
             codigo: pedido.codigo,
@@ -146,7 +163,7 @@ async function criarRegistroLucroReal(pedido) {
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
-            data_emissao: pedido.data_emissao || pedido.data_registro || new Date().toISOString().split('T')[0]
+            data_emissao: dataEmissao
         };
 
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
@@ -184,6 +201,13 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
 
         const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
+        let dataEmissao = pedido.data_emissao || pedido.data_registro;
+        if (dataEmissao) {
+            dataEmissao = dataEmissao.split('T')[0];
+        } else {
+            dataEmissao = registroExistente.data_emissao;
+        }
+
         const updates = {
             nf: numeroNF,
             vendedor: pedido.vendedor || pedido.responsavel || '',
@@ -193,7 +217,7 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
-            data_emissao: pedido.data_emissao || pedido.data_registro || registroExistente.data_emissao
+            data_emissao: dataEmissao
         };
 
         const response = await fetch(
@@ -235,15 +259,17 @@ async function processarPedido(pedido) {
 }
 
 // ==============================
-// MONITORAMENTO CONTÍNUO (rápido)
+// MONITORAMENTO CONTÍNUO
 // ==============================
+let ultimaVerificacao = new Date(0); // Inicia como época
+
 async function verificarPedidosRecentes() {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos atualizados recentemente...`);
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos criados/atualizados recentemente...`);
     try {
-        // Busca pedidos que foram criados ou atualizados nos últimos 2 minutos
-        const doisMinutosAtras = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        // Busca pedidos que foram criados ou atualizados desde a última verificação (menos 5 segundos de margem)
+        const desde = new Date(ultimaVerificacao.getTime() - 5000).toISOString();
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&updated_at=gte.${doisMinutosAtras}&order=updated_at.desc`,
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&updated_at=gte.${desde}&order=updated_at.asc`,
             {
                 headers: {
                     apikey: SUPABASE_KEY,
@@ -258,12 +284,14 @@ async function verificarPedidosRecentes() {
         }
 
         const pedidos = await response.json();
+        ultimaVerificacao = new Date(); // Atualiza a referência
+
         if (pedidos.length === 0) {
-            console.log('📭 Nenhum pedido recente encontrado');
+            console.log('📭 Nenhum pedido novo ou atualizado encontrado');
             return;
         }
 
-        console.log(`📦 ${pedidos.length} pedido(s) recente(s) encontrado(s)`);
+        console.log(`📦 ${pedidos.length} pedido(s) encontrado(s)`);
         for (const pedido of pedidos) {
             await processarPedido(pedido);
         }
@@ -308,12 +336,30 @@ async function cargaCompleta() {
 }
 
 // ==============================
-// ROTA DE DEBUG
+// ROTAS DE DEBUG
 // ==============================
 app.get('/api/debug/pedidos', async (req, res) => {
     try {
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo,nf,documento,status,updated_at&order=updated_at.desc&limit=20`,
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo,nf,documento,status,updated_at,data_emissao,data_registro&order=updated_at.desc&limit=20`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/debug/lucro-real', async (req, res) => {
+    try {
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/lucro_real?select=*&order=created_at.desc&limit=20`,
             {
                 headers: {
                     apikey: SUPABASE_KEY,
@@ -448,13 +494,13 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 // ==============================
 // INICIAR MONITORAMENTO
 // ==============================
-// Faz uma carga completa ao iniciar (após 5 segundos)
+// Faz uma carga completa ao iniciar (após 3 segundos)
 setTimeout(() => {
     console.log('⏳ Executando carga inicial...');
     cargaCompleta();
-}, 5000);
+}, 3000);
 
-// Monitoramento rápido a cada 15 segundos (para atualizações quase em tempo real)
+// Monitoramento rápido a cada 15 segundos
 setInterval(verificarPedidosRecentes, 15 * 1000);
 
 // Também uma varredura completa a cada 30 minutos para garantir consistência
@@ -475,8 +521,9 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
     console.log('📦 Supabase conectado');
-    console.log('💰 Monitorando TODOS os pedidos (baseado no código)');
+    console.log('💰 Processando TODOS os pedidos (baseado no código)');
     console.log('⏱️  Verificando atualizações a cada 15 segundos');
     console.log('🔄 Carga completa a cada 30 minutos');
-    console.log('🔍 Rota de debug: /api/debug/pedidos');
+    console.log('🔍 Rota de debug pedidos: /api/debug/pedidos');
+    console.log('🔍 Rota de debug lucro-real: /api/debug/lucro-real');
 });
