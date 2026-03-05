@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <!-- Dashboard Cards (6 cards) -->
+            <!-- Dashboard Cards -->
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-icon stat-icon-success">
@@ -34,13 +34,13 @@
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(255, 82, 29, 0.1); color: #ff521d;">
+                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 7h16M4 12h16M4 17h10" />
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" id="totalCusto">R$ 0,00</div>
+                        <div class="stat-value" style="color:#EF4444;" id="totalCusto">R$ 0,00</div>
                         <div class="stat-label">CUSTO</div>
                     </div>
                 </div>
@@ -71,13 +71,13 @@
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-icon stat-icon-default">
+                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 10h18M3 14h18" />
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" id="totalImposto">R$ 0,00</div>
+                        <div class="stat-value" style="color:#EF4444;" id="totalImposto">R$ 0,00</div>
                         <div class="stat-label">IMP FED</div>
                     </div>
                 </div>
@@ -103,12 +103,12 @@
                         <circle cx="11" cy="11" r="8" />
                         <path d="m21 21-4.35-4.35" />
                     </svg>
-                    <input type="text" id="search" placeholder="PESQUISAR POR NF, VENDEDOR..." oninput="filterLucroReal()">
+                    <input type="text" id="search" placeholder="Pesquisar por NF, vendedor..." oninput="filterLucroReal()">
 
                     <div class="search-bar-filters">
                         <div class="filter-dropdown-inline">
                             <select id="filterVendedor" onchange="filterLucroReal()">
-                                <option value="">VENDEDOR</option>
+                                <option value="">Vendedor</option>
                             </select>
                             <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="6 9 12 15 18 9" />
@@ -121,7 +121,7 @@
                                 </svg>
                             </button>
                             <div class="month-display-inline">
-                                <span id="currentMonth">CARREGANDO...</span>
+                                <span id="currentMonth">Carregando...</span>
                             </div>
                             <button onclick="changeMonth(1)" class="month-nav-arrow" title="Próximo mês">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -145,13 +145,9 @@
                             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                         </svg>
                     </button>
-                    <!-- Ícone Diferença -->
+                    <!-- Ícone Diferença (≠) -->
                     <button class="calendar-btn" onclick="openDiferencaModal()" title="Definir diferença mensal">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="16" />
-                            <line x1="8" y1="12" x2="16" y2="12" />
-                        </svg>
+                        <span style="font-size:1.2rem; font-weight:bold;">≠</span>
                     </button>
                     <button class="calendar-btn" onclick="openRelatorioAnualModal()" title="Relatório Anual">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -207,7 +203,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO (um clique) -->
+    <!-- MODAL DE EDIÇÃO -->
     <div class="modal-overlay" id="editModal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
@@ -217,15 +213,15 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="editCusto">CUSTO (R$)</label>
-                    <input type="number" id="editCusto" step="0.01" min="0">
+                    <input type="number" id="editCusto" step="0.01" min="0" max="5000000">
                 </div>
                 <div class="form-group">
                     <label for="editComissao">COMISSÃO (R$)</label>
-                    <input type="number" id="editComissao" step="0.01" min="0">
+                    <input type="number" id="editComissao" step="0.01" min="0" max="5000000">
                 </div>
                 <div class="form-group">
                     <label for="editImposto">IMPOSTO FEDERAL (R$)</label>
-                    <input type="number" id="editImposto" step="0.01" min="0">
+                    <input type="number" id="editImposto" step="0.01" min="0" max="5000000">
                 </div>
             </div>
             <div class="modal-actions">
