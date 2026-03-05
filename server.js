@@ -106,7 +106,9 @@ app.get('/api/test/frete/:id', async (req, res) => {
 // Funções auxiliares
 function parseValorMonetario(valor) {
     if (!valor) return 0;
-    const num = parseFloat(valor);
+    // Converte para string e trata formato brasileiro (ex: "1.234,56" ou "1234.56")
+    let str = String(valor).replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(str);
     return isNaN(num) ? 0 : num;
 }
 
@@ -133,7 +135,6 @@ async function criarRegistroLucroReal(frete) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // 🔧 Copia o valor do frete do Controle de Frete
         const freteValor = parseValorMonetario(frete.valor_frete);
         console.log(`📊 frete.id=${frete.id}, venda=${venda}, freteValor=${freteValor}, comissao=${comissao}, impostoFederal=${impostoFederal}`);
 
@@ -195,7 +196,6 @@ async function atualizarRegistroLucroReal(frete, existente) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // 🔧 Atualiza o frete também (para refletir mudanças no controle_frete)
         const freteValor = parseValorMonetario(frete.valor_frete);
         const custoAtual = existente.custo || 0;
         const lucroReal = venda - custoAtual - freteValor - comissao - impostoFederal;
@@ -208,7 +208,7 @@ async function atualizarRegistroLucroReal(frete, existente) {
             nf: numeroNF,
             vendedor: frete.vendedor || '',
             venda: venda,
-            frete: freteValor,   // 🔥 agora atualiza o frete!
+            frete: freteValor,
             comissao: comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
@@ -244,15 +244,16 @@ async function atualizarRegistroLucroReal(frete, existente) {
 
 // 🔍 Função para verificar se o tipo_nf deve ser processado (apenas ENVIO)
 function deveProcessarFrete(frete) {
-    const tipo = frete.tipo_nf || 'ENVIO';
-    // Apenas ENVIO deve ser processado
+    // Se não tiver tipo_nf ou for vazio, não processa
+    const tipo = frete.tipo_nf ? frete.tipo_nf.trim() : null;
+    // Apenas 'ENVIO' é permitido
     return tipo === 'ENVIO';
 }
 
 async function processarFrete(frete) {
     if (!deveProcessarFrete(frete)) {
         console.log(`⏭️ Ignorando frete ${frete.id} (tipo: ${frete.tipo_nf})`);
-        return true;
+        return true; // ignorado, mas considerado processado para não gerar erro
     }
 
     console.log(`⚙️ Processando frete ${frete.id} (NF: ${frete.numero_nf || '-'})`);
@@ -308,7 +309,7 @@ app.get('/api/monitorar-pedidos', async (req, res) => {
 // DEBUG: ver fretes do controle_frete
 app.get('/api/debug/fretes', async (req, res) => {
     try {
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=id,numero_nf,vendedor,valor_nf,valor_frete,data_emissao,updated_at&order=updated_at.desc&limit=20`, {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=id,numero_nf,vendedor,valor_nf,valor_frete,tipo_nf,data_emissao,updated_at&order=updated_at.desc&limit=20`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
         });
         const data = await resp.json();
