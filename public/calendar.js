@@ -1,9 +1,4 @@
-// ============================================
-// CALENDAR MODAL FUNCTIONALITY
-// Pedidos de Faturamento - Month Navigation
-// ============================================
 
-let calendarYear = new Date().getFullYear();
 
 function toggleCalendar() {
     const modal = document.getElementById('calendarModal');
