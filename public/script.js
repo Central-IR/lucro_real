@@ -144,7 +144,7 @@ async function loadLucroReal() {
         const data = await response.json();
         if (mes !== currentMonth.getMonth() || ano !== currentMonth.getFullYear()) return;
 
-        lucroData = data; // já ordenado por data_emissao.asc pelo backend
+        lucroData = data;
         isOnline = true;
         updateConnectionStatus();
         lastDataHash = JSON.stringify(lucroData.map(r => r.id));
@@ -201,15 +201,14 @@ function updateDashboard() {
     });
 
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
-    document.getElementById('totalCusto').innerHTML = `<span style="color: #ff521d; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalCusto)}</span>`;
+    document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalCusto)}</span>`;
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalFrete)}</span>`;
     document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
-    document.getElementById('totalImposto').innerHTML = formatarMoeda(totalImposto);
+    document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalImposto)}</span>`;
 
     const lucroBruto = totalVenda - totalCusto;
     const lbElement = document.getElementById('totalLucroBruto');
     lbElement.innerHTML = formatarMoeda(lucroBruto);
-    const card = document.getElementById('cardLucroBruto');
     if (lucroBruto > 0) {
         lbElement.style.color = '#22C55E';
         lbElement.style.fontWeight = '700';
@@ -257,7 +256,6 @@ function updateTable() {
         filtered = filtered.filter(r => (r.vendedor || '').toUpperCase() === filterVendedor.toUpperCase());
     }
 
-    // Já ordenado por data_emissao do backend, mas mantemos ordenação por data para garantir
     filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
 
     if (filtered.length === 0) {
@@ -276,10 +274,10 @@ function updateTable() {
             <td>${(r.nf || '-').toUpperCase()}</td>
             <td>${(r.vendedor || '-').toUpperCase()}</td>
             <td>${formatarMoeda(r.venda)}</td>
-            <td style="font-weight:700; color:#ff521d;">${formatarMoeda(r.custo)}</td>
+            <td style="font-weight:700; color:#EF4444;">${formatarMoeda(r.custo)}</td>
             <td>${formatarMoeda(r.frete)}</td>
             <td>${formatarMoeda(r.comissao)}</td>
-            <td>${formatarMoeda(r.imposto_federal)}</td>
+            <td style="font-weight:700; color:#EF4444;">${formatarMoeda(r.imposto_federal)}</td>
             <td style="font-weight:700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
             <td style="font-weight:700;" class="${margemClass}">${margem.toFixed(2)}%</td>
         </tr>`;
@@ -520,9 +518,9 @@ async function renderRelatorio() {
                     </div>
                     <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Frete:</span> ${percentualFrete}%</div>
                     <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro:</span> ${formatarMoeda(m.lucroTotal)}</div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Custo:</span> <span style="color:#EF4444; font-weight:700;">${formatarMoeda(m.custoTotal)}</span></div>
                     <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}" style="font-weight:700;">${formatarMoeda(lucroBruto)}</span></div>
-                    <div><span style="font-weight:700;">Simples:</span> ${formatarMoeda(m.impostoTotal)}</div>
+                    <div><span style="font-weight:700;">Simples:</span> <span style="color:#EF4444; font-weight:700;">${formatarMoeda(m.impostoTotal)}</span></div>
                     <div style="margin-top:0.5rem; font-size:0.9rem;"><span style="font-weight:700;">Diferença:</span> ${formatarMoeda(diffs[mesIndex])}</div>
                 </div>
             `;
@@ -551,8 +549,8 @@ async function renderRelatorio() {
         const lucroBrutoAnoClass = lucroBrutoAno >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
         html += `
-            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0;">
-                <div class="stat-card" style="flex:1; max-width:200px;">
+            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap: wrap;">
+                <div class="stat-card" style="flex:1; min-width:160px;">
                     <div class="stat-icon stat-icon-default" style="background:rgba(107,114,128,0.1);">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10" />
@@ -564,7 +562,7 @@ async function renderRelatorio() {
                         <div class="stat-label">TOTAL FRETE</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; max-width:200px;">
+                <div class="stat-card" style="flex:1; min-width:160px;">
                     <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -575,29 +573,29 @@ async function renderRelatorio() {
                         <div class="stat-label">TOTAL LUCRO</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; max-width:200px;">
-                    <div class="stat-icon" style="background:rgba(255,82,29,0.1); color:#ff521d;">
+                <div class="stat-card" style="flex:1; min-width:160px;">
+                    <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 7h16M4 12h16M4 17h10" />
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" style="color:#ff521d;">${formatarMoeda(totalCustoAno)}</div>
+                        <div class="stat-value" style="color:#EF4444;">${formatarMoeda(totalCustoAno)}</div>
                         <div class="stat-label">TOTAL CUSTO</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; max-width:200px;">
-                    <div class="stat-icon stat-icon-default">
+                <div class="stat-card" style="flex:1; min-width:160px;">
+                    <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 10h18M3 14h18" />
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">${formatarMoeda(totalImpostoAno)}</div>
+                        <div class="stat-value" style="color:#EF4444;">${formatarMoeda(totalImpostoAno)}</div>
                         <div class="stat-label">TOTAL IMPOSTO</div>
                     </div>
                 </div>
-                <div class="stat-card" style="flex:1; max-width:200px;">
+                <div class="stat-card" style="flex:1; min-width:160px;">
                     <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 12H4M12 4v16" />
