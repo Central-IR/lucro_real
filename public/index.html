@@ -29,7 +29,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalVenda">R$ 0,00</div>
-                        <div class="stat-label">VENDA</div>
+                        <div class="stat-label">Venda</div>
                     </div>
                 </div>
                 
@@ -41,7 +41,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" style="color: #EF4444; font-weight: 700;" id="totalCusto">R$ 0,00</div>
-                        <div class="stat-label">CUSTO</div>
+                        <div class="stat-label">Custo</div>
                     </div>
                 </div>
                 
@@ -54,7 +54,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" style="color: #3B82F6; font-weight: 700;" id="totalFrete">R$ 0,00</div>
-                        <div class="stat-label">FRETE</div>
+                        <div class="stat-label">Frete</div>
                     </div>
                 </div>
                 
@@ -66,7 +66,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalComissao">R$ 0,00</div>
-                        <div class="stat-label">COMISSÃO</div>
+                        <div class="stat-label">Comissão</div>
                     </div>
                 </div>
                 
@@ -78,7 +78,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" style="color: #EF4444;" id="totalImposto">R$ 0,00</div>
-                        <div class="stat-label">IMP FED</div>
+                        <div class="stat-label">Imp Federal</div>
                     </div>
                 </div>
 
@@ -91,7 +91,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
-                        <div class="stat-label">LUCRO BRUTO (MÊS)</div>
+                        <div class="stat-label">Lucro Bruto</div>
                     </div>
                 </div>
             </div>
@@ -203,7 +203,7 @@
     <div class="modal-overlay" id="editModal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3 class="modal-title">EDITAR VALORES - NF <span id="editNF"></span></h3>
+                <h3 class="modal-title">Definição de Custo - NF <span id="editNF"></span></h3>
                 <button class="close-modal" onclick="closeEditModal()">✕</button>
             </div>
             <div class="modal-body">
@@ -211,18 +211,9 @@
                     <label for="editCusto">CUSTO (R$)</label>
                     <input type="number" id="editCusto" step="0.01" min="0" max="5000000">
                 </div>
-                <div class="form-group">
-                    <label for="editComissao">COMISSÃO (R$)</label>
-                    <input type="number" id="editComissao" step="0.01" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="editImposto">IMPOSTO FEDERAL (R$)</label>
-                    <input type="number" id="editImposto" step="0.01" min="0">
-                </div>
-            </div>
             <div class="modal-actions">
-                <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
-                <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
+                <button type="button" onclick="closeEditModal()" class="secondary">Cancelar</button>
+                <button type="button" onclick="saveEditModal()" class="btn-save-green">Salvar</button>
             </div>
         </div>
     </div>
