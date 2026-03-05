@@ -118,16 +118,14 @@ async function criarRegistroLucroReal(frete) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // Custo e frete iniciais zero
         const lucroReal = venda - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
         const numeroNF = frete.numero_nf && frete.numero_nf.trim() !== '' ? frete.numero_nf : '-';
-
         const dataEmissao = (frete.data_emissao || new Date().toISOString()).split('T')[0];
 
         const registro = {
-            codigo: frete.id,          // usando o id do controle_frete como chave
+            codigo: frete.id,
             nf: numeroNF,
             vendedor: frete.vendedor || '',
             venda: venda,
@@ -170,14 +168,12 @@ async function atualizarRegistroLucroReal(frete, existente) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // Preserva custo e frete manuais
         const custoAtual = existente.custo || 0;
         const freteAtual = existente.frete || 0;
         const lucroReal = venda - custoAtual - freteAtual - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
         const numeroNF = frete.numero_nf && frete.numero_nf.trim() !== '' ? frete.numero_nf : '-';
-
         const dataEmissao = (frete.data_emissao || existente.data_emissao).split('T')[0];
 
         const updates = {
@@ -215,7 +211,19 @@ async function atualizarRegistroLucroReal(frete, existente) {
     }
 }
 
+// 🔍 Função para verificar se o tipo_nf deve ser processado
+function deveProcessarFrete(frete) {
+    const tiposIgnorar = ['DEVOLUCAO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA', 'CANCELADA'];
+    const tipo = frete.tipo_nf || 'ENVIO';
+    return !tiposIgnorar.includes(tipo);
+}
+
 async function processarFrete(frete) {
+    if (!deveProcessarFrete(frete)) {
+        console.log(`⏭️ Ignorando frete ${frete.id} (tipo: ${frete.tipo_nf})`);
+        return true; // ignorado, mas considerado processado para não gerar erro
+    }
+
     console.log(`⚙️ Processando frete ${frete.id} (NF: ${frete.numero_nf || '-'})`);
     const existente = await obterRegistroExistente(frete.id);
     if (existente) {
