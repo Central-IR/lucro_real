@@ -118,7 +118,9 @@ async function criarRegistroLucroReal(frete) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        const lucroReal = venda - comissao - impostoFederal;
+        // 🔧 Agora o frete é copiado do valor_frete do controle_frete
+        const freteValor = parseValorMonetario(frete.valor_frete);
+        const lucroReal = venda - freteValor - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
         const numeroNF = frete.numero_nf && frete.numero_nf.trim() !== '' ? frete.numero_nf : '-';
@@ -130,7 +132,7 @@ async function criarRegistroLucroReal(frete) {
             vendedor: frete.vendedor || '',
             venda: venda,
             custo: 0,
-            frete: 0,
+            frete: freteValor,
             comissao: comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
@@ -153,6 +155,11 @@ async function criarRegistroLucroReal(frete) {
 
         if (!response.ok) {
             const erro = await response.text();
+            // Se o erro for de duplicata (código 23505), significa que o registro já existe (deve ser tratado como atualização)
+            if (response.status === 409 && erro.includes('duplicate key')) {
+                console.log('⚠️ Registro já existe, tentando atualizar...');
+                return await atualizarRegistroLucroReal(frete, registro);
+            }
             console.error('❌ Erro na inserção:', erro);
             return false;
         }
@@ -168,6 +175,7 @@ async function atualizarRegistroLucroReal(frete, existente) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
+        // Mantém custo e frete manuais (não altera)
         const custoAtual = existente.custo || 0;
         const freteAtual = existente.frete || 0;
         const lucroReal = venda - custoAtual - freteAtual - comissao - impostoFederal;
@@ -221,7 +229,7 @@ function deveProcessarFrete(frete) {
 async function processarFrete(frete) {
     if (!deveProcessarFrete(frete)) {
         console.log(`⏭️ Ignorando frete ${frete.id} (tipo: ${frete.tipo_nf})`);
-        return true; // ignorado, mas considerado processado para não gerar erro
+        return true;
     }
 
     console.log(`⚙️ Processando frete ${frete.id} (NF: ${frete.numero_nf || '-'})`);
@@ -277,7 +285,7 @@ app.get('/api/monitorar-pedidos', async (req, res) => {
 // DEBUG: ver fretes do controle_frete
 app.get('/api/debug/fretes', async (req, res) => {
     try {
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=id,numero_nf,vendedor,valor_nf,data_emissao,updated_at&order=updated_at.desc&limit=20`, {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=id,numero_nf,vendedor,valor_nf,valor_frete,data_emissao,updated_at&order=updated_at.desc&limit=20`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
         });
         const data = await resp.json();
