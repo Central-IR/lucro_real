@@ -95,16 +95,12 @@ function calcularValores(pedido) {
     const frete = parseValorMonetario(pedido.valor_frete);
     const comissao = venda * (1.25 / 100);
     const impostoFederal = venda * (11 / 100);
-    const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
-    const margemLiquida = venda ? lucroReal / venda : 0;
-
+    // Nota: custo não é recalculado aqui, pois é manual
     return {
         venda,
         frete,
         comissao,
-        impostoFederal,
-        lucroReal,
-        margemLiquida
+        impostoFederal
     };
 }
 
@@ -130,13 +126,37 @@ async function pedidoJaProcessado(codigo) {
     }
 }
 
+async function obterRegistroExistente(codigo) {
+    try {
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${codigo}`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+        const data = await response.json();
+        return data[0] || null;
+    } catch (error) {
+        console.error('Erro ao obter registro:', error);
+        return null;
+    }
+}
+
 async function criarRegistroLucroReal(pedido) {
     try {
-        const { venda, frete, comissao, impostoFederal, lucroReal, margemLiquida } = calcularValores(pedido);
+        const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
+        const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
+        const margemLiquida = venda ? lucroReal / venda : 0;
+
+        // Determinar o número da NF: prioriza numero_nf, depois documento, senão '-'
+        const numeroNF = pedido.numero_nf || pedido.documento || '-';
 
         const registro = {
             codigo: pedido.codigo,
-            nf: pedido.documento || '-',
+            nf: numeroNF,
             vendedor: pedido.vendedor || pedido.responsavel || '',
             venda: venda,
             custo: 0,
@@ -165,7 +185,7 @@ async function criarRegistroLucroReal(pedido) {
             return false;
         }
 
-        console.log(`✅ Registro criado para pedido ${pedido.codigo} (NF: ${pedido.documento || '-'})`);
+        console.log(`✅ Registro criado para pedido ${pedido.codigo} (NF: ${numeroNF})`);
         return true;
     } catch (error) {
         console.error('Erro ao criar registro:', error);
@@ -173,28 +193,18 @@ async function criarRegistroLucroReal(pedido) {
     }
 }
 
-async function atualizarRegistroLucroReal(pedido) {
+async function atualizarRegistroLucroReal(pedido, registroExistente) {
     try {
-        // Buscar o registro existente
-        const getResponse = await fetch(
-            `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${pedido.codigo}`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
-            }
-        );
-        const registros = await getResponse.json();
-        if (registros.length === 0) return false;
+        const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
+        // Mantém o custo manual atual
+        const custoAtual = registroExistente.custo || 0;
+        const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
+        const margemLiquida = venda ? lucroReal / venda : 0;
 
-        const registroAtual = registros[0];
-        
-        // Recalcular valores (caso venda/frete tenham mudado)
-        const { venda, frete, comissao, impostoFederal, lucroReal, margemLiquida } = calcularValores(pedido);
+        const numeroNF = pedido.numero_nf || pedido.documento || '-';
 
         const updates = {
-            nf: pedido.documento || '-',
+            nf: numeroNF,
             vendedor: pedido.vendedor || pedido.responsavel || '',
             venda: venda,
             frete: frete,
@@ -202,7 +212,7 @@ async function atualizarRegistroLucroReal(pedido) {
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
             margem_liquida: margemLiquida,
-            data_emissao: pedido.data_emissao || registroAtual.data_emissao
+            data_emissao: pedido.data_emissao || registroExistente.data_emissao
         };
 
         const response = await fetch(
@@ -225,7 +235,7 @@ async function atualizarRegistroLucroReal(pedido) {
             return false;
         }
 
-        console.log(`🔄 Registro atualizado para pedido ${pedido.codigo} (NF: ${pedido.documento || '-'})`);
+        console.log(`🔄 Registro atualizado para pedido ${pedido.codigo} (NF: ${numeroNF})`);
         return true;
     } catch (error) {
         console.error('Erro ao atualizar registro:', error);
@@ -234,17 +244,16 @@ async function atualizarRegistroLucroReal(pedido) {
 }
 
 async function processarPedidoEmitido(pedido) {
-    const jaProcessado = await pedidoJaProcessado(pedido.codigo);
-    if (jaProcessado) {
-        // Se já existe, verifica se precisa atualizar (ex: documento mudou)
-        await atualizarRegistroLucroReal(pedido);
+    const registroExistente = await obterRegistroExistente(pedido.codigo);
+    if (registroExistente) {
+        await atualizarRegistroLucroReal(pedido, registroExistente);
     } else {
         await criarRegistroLucroReal(pedido);
     }
 }
 
 // ==============================
-// CARGA INICIAL
+// CARGA INICIAL (todos os emitidos)
 // ==============================
 async function carregarTodosPedidosEmitidos() {
     console.log('🔄 Iniciando carga inicial de todos os pedidos emitidos...');
@@ -269,26 +278,24 @@ async function carregarTodosPedidosEmitidos() {
 
         let processados = 0, ignorados = 0;
         for (const pedido of pedidos) {
-            const jaProcessado = await pedidoJaProcessado(pedido.codigo);
-            if (jaProcessado) {
-                // Atualiza se necessário
-                await atualizarRegistroLucroReal(pedido);
+            const existe = await pedidoJaProcessado(pedido.codigo);
+            if (existe) {
                 ignorados++;
-            } else if (await criarRegistroLucroReal(pedido)) {
-                processados++;
+            } else {
+                if (await criarRegistroLucroReal(pedido)) processados++;
             }
         }
-        console.log(`✅ Carga inicial: ${processados} novos, ${ignorados} atualizados`);
+        console.log(`✅ Carga inicial: ${processados} novos, ${ignorados} já existentes`);
     } catch (error) {
         console.error('❌ Erro na carga inicial:', error);
     }
 }
 
 // ==============================
-// MONITORAMENTO DE PEDIDOS (NOVOS E ATUALIZAÇÕES)
+// MONITORAMENTO DE PEDIDOS (novos e atualizados)
 // ==============================
 async function monitorarPedidosEmitidos() {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos recentes...`);
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos atualizados...`);
     try {
         const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const response = await fetch(
@@ -308,11 +315,11 @@ async function monitorarPedidosEmitidos() {
 
         const pedidos = await response.json();
         if (pedidos.length === 0) {
-            console.log('📭 Nenhum pedido novo/atualizado encontrado');
+            console.log('📭 Nenhum pedido atualizado encontrado');
             return;
         }
 
-        console.log(`📦 ${pedidos.length} pedido(s) encontrado(s)`);
+        console.log(`📦 ${pedidos.length} pedido(s) atualizado(s) encontrado(s)`);
         for (const pedido of pedidos) {
             await processarPedidoEmitido(pedido);
         }
@@ -497,8 +504,8 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
         );
 
         if (!response.ok) {
-            const errText = await response.text();
-            console.error('Erro no PATCH:', errText);
+            const erro = await response.text();
+            console.error('Erro no PATCH Supabase:', erro);
             throw new Error('Erro ao atualizar lucro real');
         }
 
@@ -506,7 +513,7 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
         res.json(data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Erro ao atualizar lucro real' });
+        res.status(500).json({ error: 'Erro ao atualizar lucro real', details: error.message });
     }
 });
 
@@ -526,6 +533,6 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor Lucro Real rodando na porta ${PORT}`);
     console.log('🔒 Autenticação centralizada no Portal');
     console.log('📦 Supabase conectado');
-    console.log('💰 Monitorando pedidos_faturamento (novos e atualizações)');
+    console.log('💰 Monitorando pedidos_faturamento (inclui atualizações)');
     console.log('🔄 Carga inicial de TODOS os pedidos emitidos');
 });
