@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <!-- Dashboard Cards com cores -->
+            <!-- Dashboard Cards (6 cards) -->
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-icon stat-icon-success">
@@ -29,7 +29,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalVenda">R$ 0,00</div>
-                        <div class="stat-label">Venda</div>
+                        <div class="stat-label">VENDA</div>
                     </div>
                 </div>
                 
@@ -41,7 +41,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalCusto">R$ 0,00</div>
-                        <div class="stat-label">Custo</div>
+                        <div class="stat-label">CUSTO</div>
                     </div>
                 </div>
                 
@@ -54,7 +54,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalFrete">R$ 0,00</div>
-                        <div class="stat-label">Frete</div>
+                        <div class="stat-label">FRETE</div>
                     </div>
                 </div>
                 
@@ -66,7 +66,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalComissao">R$ 0,00</div>
-                        <div class="stat-label">Comissão</div>
+                        <div class="stat-label">COMISSÃO</div>
                     </div>
                 </div>
                 
@@ -78,7 +78,20 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalImposto">R$ 0,00</div>
-                        <div class="stat-label">Imposto Federal</div>
+                        <div class="stat-label">IMP FED</div>
+                    </div>
+                </div>
+
+                <!-- Lucro Bruto do Mês -->
+                <div class="stat-card" id="cardLucroBruto">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
+                        <div class="stat-label">LUCRO BRUTO (MÊS)</div>
                     </div>
                 </div>
             </div>
@@ -90,12 +103,12 @@
                         <circle cx="11" cy="11" r="8" />
                         <path d="m21 21-4.35-4.35" />
                     </svg>
-                    <input type="text" id="search" placeholder="Pesquisar por NF, vendedor..." oninput="filterLucroReal()">
+                    <input type="text" id="search" placeholder="PESQUISAR POR NF, VENDEDOR..." oninput="filterLucroReal()">
 
                     <div class="search-bar-filters">
                         <div class="filter-dropdown-inline">
                             <select id="filterVendedor" onchange="filterLucroReal()">
-                                <option value="">Vendedor</option>
+                                <option value="">VENDEDOR</option>
                             </select>
                             <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="6 9 12 15 18 9" />
@@ -108,7 +121,7 @@
                                 </svg>
                             </button>
                             <div class="month-display-inline">
-                                <span id="currentMonth">Carregando...</span>
+                                <span id="currentMonth">CARREGANDO...</span>
                             </div>
                             <button onclick="changeMonth(1)" class="month-nav-arrow" title="Próximo mês">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,6 +143,14 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="23 4 23 10 17 10" />
                             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                    </button>
+                    <!-- Ícone Diferença -->
+                    <button class="calendar-btn" onclick="openDiferencaModal()" title="Definir diferença mensal">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
                         </svg>
                     </button>
                     <button class="calendar-btn" onclick="openRelatorioAnualModal()" title="Relatório Anual">
@@ -162,21 +183,21 @@
                 </div>
             </div>
 
-            <!-- Table Card - SEM COLUNA AÇÕES -->
+            <!-- Table Card -->
             <div class="card table-card">
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
                             <tr>
                                 <th>NF</th>
-                                <th>Vendedor</th>
-                                <th>Venda (R$)</th>
-                                <th>Custo (R$)</th>
-                                <th>Frete (R$)</th>
-                                <th>Comissão (R$)</th>
-                                <th>Imp Fed (R$)</th>
-                                <th>Lucro Real (R$)</th>
-                                <th>Margem Líq.</th>
+                                <th>VENDEDOR</th>
+                                <th>VENDA (R$)</th>
+                                <th>CUSTO (R$)</th>
+                                <th>FRETE (R$)</th>
+                                <th>COMISSÃO (R$)</th>
+                                <th>IMP FED (R$)</th>
+                                <th>LUCRO REAL (R$)</th>
+                                <th>MARGEM LÍQ.</th>
                             </tr>
                         </thead>
                         <tbody id="lucroContainer"></tbody>
@@ -186,46 +207,66 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO (duplo clique) -->
+    <!-- MODAL DE EDIÇÃO (um clique) -->
     <div class="modal-overlay" id="editModal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3 class="modal-title">Editar valores - NF <span id="editNF"></span></h3>
+                <h3 class="modal-title">EDITAR VALORES - NF <span id="editNF"></span></h3>
                 <button class="close-modal" onclick="closeEditModal()">✕</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="editCusto">Custo (R$)</label>
+                    <label for="editCusto">CUSTO (R$)</label>
                     <input type="number" id="editCusto" step="0.01" min="0">
                 </div>
                 <div class="form-group">
-                    <label for="editComissao">Comissão (R$)</label>
+                    <label for="editComissao">COMISSÃO (R$)</label>
                     <input type="number" id="editComissao" step="0.01" min="0">
                 </div>
                 <div class="form-group">
-                    <label for="editImposto">Imposto Federal (R$)</label>
+                    <label for="editImposto">IMPOSTO FEDERAL (R$)</label>
                     <input type="number" id="editImposto" step="0.01" min="0">
                 </div>
             </div>
             <div class="modal-actions">
-                <button type="button" onclick="closeEditModal()" class="secondary">Cancelar</button>
-                <button type="button" onclick="saveEditModal()" class="btn-save-green">Salvar</button>
+                <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
+                <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE RELATÓRIO ANUAL - APENAS ANO NO TÍTULO E SETAS SEM FUNDO -->
+    <!-- MODAL DE DIFERENÇA MENSAL -->
+    <div class="modal-overlay" id="diferencaModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">DIFERENÇA - <span id="diferencaMesAno"></span></h3>
+                <button class="close-modal" onclick="closeDiferencaModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="diferencaValor">VALOR (R$)</label>
+                    <input type="number" id="diferencaValor" step="0.01" value="0">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeDiferencaModal()" class="secondary">CANCELAR</button>
+                <button type="button" onclick="saveDiferenca()" class="btn-save-green">SALVAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE RELATÓRIO ANUAL -->
     <div class="modal-overlay" id="relatorioModal">
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
-                    <button onclick="changeRelatorioYear(-1)" class="year-nav-btn" style="background: transparent; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 6px; color: var(--text-secondary);">
+                    <button onclick="changeRelatorioYear(-1)" class="year-nav-btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="15 18 9 12 15 6" />
                         </svg>
                     </button>
                     <h3 class="modal-title" id="relatorioAnoTitulo" style="flex:1; text-align:center; margin:0;">2026</h3>
-                    <button onclick="changeRelatorioYear(1)" class="year-nav-btn" style="background: transparent; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 6px; color: var(--text-secondary);">
+                    <button onclick="changeRelatorioYear(1)" class="year-nav-btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="9 18 15 12 9 6" />
                         </svg>
