@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 // MIDDLEWARE DE AUTENTICAÇÃO
 // ==============================
 async function verificarAutenticacao(req, res, next) {
-    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial', '/api/diferencas'];
+    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial'];
 
     if (publicPaths.includes(req.path)) {
         return next();
@@ -95,7 +95,6 @@ function calcularValores(pedido) {
     const frete = parseValorMonetario(pedido.valor_frete);
     const comissao = venda * (1.25 / 100);
     const impostoFederal = venda * (11 / 100);
-    // Nota: custo não é recalculado aqui, pois é manual
     return {
         venda,
         frete,
@@ -151,8 +150,8 @@ async function criarRegistroLucroReal(pedido) {
         const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // Determinar o número da NF: prioriza numero_nf, depois documento, senão '-'
-        const numeroNF = pedido.numero_nf || pedido.documento || '-';
+        // Usar o campo 'nf' do pedido (ou fallback para documento)
+        const numeroNF = pedido.nf || pedido.documento || '-';
 
         const registro = {
             codigo: pedido.codigo,
@@ -196,12 +195,11 @@ async function criarRegistroLucroReal(pedido) {
 async function atualizarRegistroLucroReal(pedido, registroExistente) {
     try {
         const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
-        // Mantém o custo manual atual
         const custoAtual = registroExistente.custo || 0;
         const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        const numeroNF = pedido.numero_nf || pedido.documento || '-';
+        const numeroNF = pedido.nf || pedido.documento || '-';
 
         const updates = {
             nf: numeroNF,
@@ -329,77 +327,6 @@ async function monitorarPedidosEmitidos() {
 }
 
 // ==============================
-// ROTAS PARA DIFERENÇAS MENSAIS
-// ==============================
-app.get('/api/diferencas', async (req, res) => {
-    const { mes, ano } = req.query;
-    if (!mes || !ano) return res.status(400).json({ error: 'Mês e ano obrigatórios' });
-    try {
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/diferencas_mensais?mes=eq.${mes}&ano=eq.${ano}`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
-            }
-        );
-        const data = await response.json();
-        res.json(data[0] || { valor: 0 });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/diferencas', async (req, res) => {
-    const { mes, ano, valor } = req.body;
-    if (!mes || !ano || valor === undefined) return res.status(400).json({ error: 'Campos incompletos' });
-    try {
-        const check = await fetch(
-            `${SUPABASE_URL}/rest/v1/diferencas_mensais?mes=eq.${mes}&ano=eq.${ano}`,
-            {
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
-                }
-            }
-        );
-        const existente = await check.json();
-        let response;
-        if (existente.length > 0) {
-            response = await fetch(
-                `${SUPABASE_URL}/rest/v1/diferencas_mensais?mes=eq.${mes}&ano=eq.${ano}`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        apikey: SUPABASE_KEY,
-                        Authorization: `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json',
-                        Prefer: 'return=representation'
-                    },
-                    body: JSON.stringify({ valor })
-                }
-            );
-        } else {
-            response = await fetch(`${SUPABASE_URL}/rest/v1/diferencas_mensais`, {
-                method: 'POST',
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    Prefer: 'return=representation'
-                },
-                body: JSON.stringify({ mes, ano, valor })
-            });
-        }
-        const data = await response.json();
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ==============================
 // ROTAS PARA CARGA MANUAL
 // ==============================
 app.get('/api/carga-inicial', async (req, res) => {
@@ -461,7 +388,6 @@ app.get('/api/lucro-real', verificarAutenticacao, async (req, res) => {
 
 app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => {
     try {
-        // Buscar o registro atual
         const getResponse = await fetch(
             `${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${req.params.codigo}`,
             {
