@@ -13,12 +13,10 @@ let currentMonth = new Date();
 let lastDataHash = '';
 let currentFetchController = null;
 
-// Variáveis do relatório anual
 let relatorioAno = new Date().getFullYear();
 let relatorioPagina = 1;
 const mesesPorPagina = 3;
 
-// Variável do calendário (usada também no calendar.js)
 let calendarYear = new Date().getFullYear();
 
 // ============================================
@@ -52,12 +50,12 @@ async function verificarAutenticacao() {
             body: JSON.stringify({ sessionToken })
         });
         if (!verifyRes.ok) {
-            mostrarTelaAcessoNegado('Sua sessão expirou');
+            mostrarTelaAcessoNegado('SUA SESSÃO EXPIROU');
             return;
         }
         const sessionData = await verifyRes.json();
         if (!sessionData.valid) {
-            mostrarTelaAcessoNegado('Sessão inválida');
+            mostrarTelaAcessoNegado('SESSÃO INVÁLIDA');
             return;
         }
     } catch (e) {
@@ -70,7 +68,7 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
     document.body.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary); color: var(--text-primary); text-align: center; padding: 2rem;">
             <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">${mensagem}</h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Somente usuários autenticados podem acessar esta área.</p>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">SOMENTE USUÁRIOS AUTENTICADOS PODEM ACESSAR ESTA ÁREA.</p>
             <a href="${PORTAL_URL}" style="display: inline-block; background: var(--btn-register); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">IR PARA O PORTAL</a>
         </div>
     `;
@@ -99,14 +97,13 @@ async function syncData() {
         btnSync.disabled = true;
     }
     try {
-        // Chamar monitoramento manual antes de recarregar
         await fetch(`${API_URL}/monitorar-pedidos`, {
             headers: { 'X-Session-Token': sessionToken }
         });
         await loadLucroReal();
-        showMessage('Dados sincronizados', 'success');
+        showMessage('DADOS SINCRONIZADOS', 'success');
     } catch (error) {
-        showMessage('Erro ao sincronizar', 'error');
+        showMessage('ERRO AO SINCRONIZAR', 'error');
     } finally {
         if (btnSync) {
             btnSync.classList.remove('syncing');
@@ -147,7 +144,7 @@ async function loadLucroReal() {
         const data = await response.json();
         if (mes !== currentMonth.getMonth() || ano !== currentMonth.getFullYear()) return;
 
-        lucroData = data;
+        lucroData = data; // já ordenado por data_emissao.asc pelo backend
         isOnline = true;
         updateConnectionStatus();
         lastDataHash = JSON.stringify(lucroData.map(r => r.id));
@@ -175,8 +172,8 @@ function changeMonth(direction) {
 }
 
 function updateMonthDisplay() {
-    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const months = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+        'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
     const monthName = months[currentMonth.getMonth()];
     const year = currentMonth.getFullYear();
     document.getElementById('currentMonth').textContent = `${monthName} ${year}`;
@@ -203,29 +200,37 @@ function updateDashboard() {
         totalImposto += r.imposto_federal || 0;
     });
 
-    // Venda - Verde
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
-    
-    // Custo - Laranja
     document.getElementById('totalCusto').innerHTML = `<span style="color: #ff521d; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalCusto)}</span>`;
-    
-    // Frete - Azul
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700; font-size: 1.75rem;">${formatarMoeda(totalFrete)}</span>`;
-    
-    // Comissão e Imposto - cor padrão
     document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
     document.getElementById('totalImposto').innerHTML = formatarMoeda(totalImposto);
+
+    const lucroBruto = totalVenda - totalCusto;
+    const lbElement = document.getElementById('totalLucroBruto');
+    lbElement.innerHTML = formatarMoeda(lucroBruto);
+    const card = document.getElementById('cardLucroBruto');
+    if (lucroBruto > 0) {
+        lbElement.style.color = '#22C55E';
+        lbElement.style.fontWeight = '700';
+    } else if (lucroBruto < 0) {
+        lbElement.style.color = '#EF4444';
+        lbElement.style.fontWeight = '700';
+    } else {
+        lbElement.style.color = '';
+        lbElement.style.fontWeight = '';
+    }
 }
 
 function updateVendedoresFilter() {
     const vendedores = new Set(lucroData.map(r => r.vendedor).filter(Boolean));
     const select = document.getElementById('filterVendedor');
     const current = select.value;
-    select.innerHTML = '<option value="">Vendedor</option>';
+    select.innerHTML = '<option value="">VENDEDOR</option>';
     Array.from(vendedores).sort().forEach(v => {
         const option = document.createElement('option');
         option.value = v;
-        option.textContent = v;
+        option.textContent = v.toUpperCase();
         select.appendChild(option);
     });
     select.value = current;
@@ -244,38 +249,39 @@ function updateTable() {
 
     if (search) {
         filtered = filtered.filter(r =>
-            r.codigo?.toString().includes(search) ||
+            (r.nf || '').toLowerCase().includes(search) ||
             (r.vendedor || '').toLowerCase().includes(search)
         );
     }
     if (filterVendedor) {
-        filtered = filtered.filter(r => r.vendedor === filterVendedor);
+        filtered = filtered.filter(r => (r.vendedor || '').toUpperCase() === filterVendedor.toUpperCase());
     }
 
-    filtered.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+    // Já ordenado por data_emissao do backend, mas mantemos ordenação por data para garantir
+    filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
 
     if (filtered.length === 0) {
-        container.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">Nenhum registro encontrado</td></tr>';
+        container.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">NENHUM REGISTRO ENCONTRADO</td></tr>';
         return;
     }
 
     container.innerHTML = filtered.map(r => {
         const lucroReal = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
         const margem = r.venda ? (lucroReal / r.venda) * 100 : 0;
-        
         const lucroClass = lucroReal >= 0 ? 'stat-value-success' : 'stat-value-danger';
+        const margemClass = margem >= 0 ? 'stat-value-success' : 'stat-value-danger';
         
         return `
-        <tr ondblclick="abrirEditModal('${r.codigo}')">
-            <td><strong>${r.codigo || '-'}</strong></td>
-            <td>${r.vendedor || '-'}</td>
-            <td><span class="stat-value-success">${formatarMoeda(r.venda)}</span></td>
-            <td><span style="color: #ff521d; font-weight: 600;">${formatarMoeda(r.custo)}</span></td>
-            <td><span style="color: #3B82F6; font-weight: 600;">${formatarMoeda(r.frete)}</span></td>
+        <tr onclick="abrirEditModal('${r.codigo}')">
+            <td>${(r.nf || '-').toUpperCase()}</td>
+            <td>${(r.vendedor || '-').toUpperCase()}</td>
+            <td>${formatarMoeda(r.venda)}</td>
+            <td style="font-weight:700; color:#ff521d;">${formatarMoeda(r.custo)}</td>
+            <td>${formatarMoeda(r.frete)}</td>
             <td>${formatarMoeda(r.comissao)}</td>
             <td>${formatarMoeda(r.imposto_federal)}</td>
-            <td><span class="${lucroClass}">${formatarMoeda(lucroReal)}</span></td>
-            <td>${margem.toFixed(2)}%</td>
+            <td style="font-weight:700;" class="${lucroClass}">${formatarMoeda(lucroReal)}</td>
+            <td style="font-weight:700;" class="${margemClass}">${margem.toFixed(2)}%</td>
         </tr>`;
     }).join('');
 }
@@ -287,12 +293,6 @@ function formatarMoeda(valor) {
     if (valor === null || valor === undefined) return 'R$ 0,00';
     const num = parseFloat(valor);
     return 'R$ ' + num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-function parseMoeda(valor) {
-    if (!valor) return 0;
-    const cleaned = String(valor).replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3}[,.])/g, '').replace(',', '.');
-    return parseFloat(cleaned) || 0;
 }
 
 function showMessage(message, type = 'success') {
@@ -307,7 +307,7 @@ function showMessage(message, type = 'success') {
 }
 
 // ============================================
-// MODAL DE EDIÇÃO (duplo clique)
+// MODAL DE EDIÇÃO (um clique)
 // ============================================
 let currentEditCodigo = null;
 
@@ -316,7 +316,7 @@ function abrirEditModal(codigo) {
     if (!registro) return;
 
     currentEditCodigo = codigo;
-    document.getElementById('editNF').textContent = codigo;
+    document.getElementById('editNF').textContent = registro.nf || '-';
 
     document.getElementById('editCusto').value = registro.custo || 0;
     document.getElementById('editComissao').value = registro.comissao || 0;
@@ -363,10 +363,58 @@ async function saveEditModal() {
         updateTable();
         updateDashboard();
         closeEditModal();
-        showMessage('Valores atualizados', 'success');
+        showMessage('VALORES ATUALIZADOS', 'success');
     } catch (error) {
         console.error(error);
-        showMessage('Erro ao salvar', 'error');
+        showMessage('ERRO AO SALVAR', 'error');
+    }
+}
+
+// ============================================
+// MODAL DE DIFERENÇA MENSAL
+// ============================================
+function openDiferencaModal() {
+    const mes = currentMonth.getMonth();
+    const ano = currentMonth.getFullYear();
+    document.getElementById('diferencaMesAno').textContent = 
+        `${['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][mes]} ${ano}`;
+    
+    fetch(`${API_URL}/diferencas?mes=${mes}&ano=${ano}`, {
+        headers: { 'X-Session-Token': sessionToken }
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('diferencaValor').value = data.valor || 0;
+    })
+    .catch(err => {
+        document.getElementById('diferencaValor').value = 0;
+    });
+
+    document.getElementById('diferencaModal').classList.add('show');
+}
+
+function closeDiferencaModal() {
+    document.getElementById('diferencaModal').classList.remove('show');
+}
+
+async function saveDiferenca() {
+    const mes = currentMonth.getMonth();
+    const ano = currentMonth.getFullYear();
+    const valor = parseFloat(document.getElementById('diferencaValor').value) || 0;
+
+    try {
+        await fetch(`${API_URL}/diferencas`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-Token': sessionToken
+            },
+            body: JSON.stringify({ mes, ano, valor })
+        });
+        showMessage('DIFERENÇA SALVA', 'success');
+        closeDiferencaModal();
+    } catch (error) {
+        showMessage('ERRO AO SALVAR', 'error');
     }
 }
 
@@ -405,6 +453,16 @@ async function renderRelatorio() {
         if (!response.ok) throw new Error();
         const dadosAno = await response.json();
 
+        // Carregar diferenças mensais
+        const diffs = {};
+        for (let m = 0; m < 12; m++) {
+            const diffRes = await fetch(`${API_URL}/diferencas?mes=${m}&ano=${relatorioAno}`, {
+                headers: { 'X-Session-Token': sessionToken }
+            });
+            const diffData = await diffRes.json();
+            diffs[m] = diffData.valor || 0;
+        }
+
         const meses = Array(12).fill().map(() => ({
             freteTotal: 0,
             vendaTotal: 0,
@@ -425,8 +483,8 @@ async function renderRelatorio() {
             meses[mes].impostoTotal += r.imposto_federal || 0;
         });
 
-        const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                           'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const mesesNomes = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 
+                           'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
 
         const totalPaginas = Math.ceil(12 / mesesPorPagina);
         const inicio = (relatorioPagina - 1) * mesesPorPagina;
@@ -441,21 +499,38 @@ async function renderRelatorio() {
             const percentualFrete = m.vendaTotal ? ((m.freteTotal / m.vendaTotal) * 100).toFixed(2) : '0.00';
             const lucroBruto = m.lucroTotal - m.custoTotal;
             const lucroBrutoClass = lucroBruto >= 0 ? 'stat-value-success' : 'stat-value-danger';
+            
+            // Tendência em relação ao mês anterior
+            let tendencia = '';
+            if (mesIndex > 0) {
+                const mesAnt = meses[mesIndex - 1];
+                const lucroBrutoAnt = mesAnt.lucroTotal - mesAnt.custoTotal;
+                if (lucroBruto > lucroBrutoAnt) {
+                    tendencia = '<span style="color:#22C55E; font-weight:bold; margin-left:0.5rem;">▲</span>';
+                } else if (lucroBruto < lucroBrutoAnt) {
+                    tendencia = '<span style="color:#EF4444; font-weight:bold; margin-left:0.5rem;">▼</span>';
+                }
+            }
 
             html += `
-                <div style="padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107,114,128,0.2); border-radius: 8px;">
-                    <h4 style="margin:0 0 0.75rem 0; color: var(--text-primary);">${nome}</h4>
-                    <div style="margin-bottom:0.5rem;"><span style="color:#3B82F6;">Frete:</span> ${percentualFrete}%</div>
-                    <div style="margin-bottom:0.5rem;">Lucro: ${formatarMoeda(m.lucroTotal)}</div>
-                    <div style="margin-bottom:0.5rem;">Custo: ${formatarMoeda(m.custoTotal)}</div>
-                    <div style="margin-bottom:0.5rem;">Lucro Bruto: <span class="${lucroBrutoClass}">${formatarMoeda(lucroBruto)}</span></div>
-                    <div>Simples: ${formatarMoeda(m.impostoTotal)}</div>
+                <div style="padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107,114,128,0.2); border-radius: 8px; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin:0 0 0.5rem 0; color: var(--text-primary); font-weight:700;">${nome}</h4>
+                        ${tendencia}
+                    </div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Frete:</span> ${percentualFrete}%</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro:</span> ${formatarMoeda(m.lucroTotal)}</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
+                    <div style="margin-bottom:0.5rem;"><span style="font-weight:700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}" style="font-weight:700;">${formatarMoeda(lucroBruto)}</span></div>
+                    <div><span style="font-weight:700;">Simples:</span> ${formatarMoeda(m.impostoTotal)}</div>
+                    <div style="margin-top:0.5rem; font-size:0.9rem;"><span style="font-weight:700;">Diferença:</span> ${formatarMoeda(diffs[mesIndex])}</div>
                 </div>
             `;
         });
 
         html += '</div>';
 
+        // Paginação
         html += `
             <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
                 <button onclick="changeRelatorioPagina(-1)" ${relatorioPagina === 1 ? 'disabled' : ''} 
@@ -466,6 +541,7 @@ async function renderRelatorio() {
             </div>
         `;
 
+        // Totais anuais em cards
         const totalVendaAno = meses.reduce((acc, m) => acc + m.vendaTotal, 0);
         const totalFreteAno = meses.reduce((acc, m) => acc + m.freteTotal, 0);
         const totalLucroAno = meses.reduce((acc, m) => acc + m.lucroTotal, 0);
@@ -475,49 +551,69 @@ async function renderRelatorio() {
         const lucroBrutoAnoClass = lucroBrutoAno >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
         html += `
-            <div style="display: flex; gap: 1rem; justify-content: center; max-width: 800px; margin: 0 auto;">
-                <div style="flex:1; text-align:center; padding:1rem; background:var(--bg-card); border-radius:8px;">
-                    <div>Total Frete</div>
-                    <div style="font-weight:700; color:#3B82F6;">${formatarMoeda(totalFreteAno)}</div>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0;">
+                <div class="stat-card" style="flex:1; max-width:200px;">
+                    <div class="stat-icon stat-icon-default" style="background:rgba(107,114,128,0.1);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" style="color:#3B82F6;">${formatarMoeda(totalFreteAno)}</div>
+                        <div class="stat-label">TOTAL FRETE</div>
+                    </div>
                 </div>
-                <div style="flex:1; text-align:center; padding:1rem; background:var(--bg-card); border-radius:8px;">
-                    <div>Total Lucro</div>
-                    <div style="font-weight:700;">${formatarMoeda(totalLucroAno)}</div>
+                <div class="stat-card" style="flex:1; max-width:200px;">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">${formatarMoeda(totalLucroAno)}</div>
+                        <div class="stat-label">TOTAL LUCRO</div>
+                    </div>
                 </div>
-                <div style="flex:1; text-align:center; padding:1rem; background:var(--bg-card); border-radius:8px;">
-                    <div>Total Custo</div>
-                    <div style="font-weight:700; color:#ff521d;">${formatarMoeda(totalCustoAno)}</div>
+                <div class="stat-card" style="flex:1; max-width:200px;">
+                    <div class="stat-icon" style="background:rgba(255,82,29,0.1); color:#ff521d;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 7h16M4 12h16M4 17h10" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" style="color:#ff521d;">${formatarMoeda(totalCustoAno)}</div>
+                        <div class="stat-label">TOTAL CUSTO</div>
+                    </div>
                 </div>
-            </div>
-            <div style="display: flex; gap: 1rem; justify-content: center; max-width: 800px; margin: 1rem auto 0;">
-                <div style="flex:1; text-align:center; padding:1rem; background:var(--bg-card); border-radius:8px;">
-                    <div>Lucro Bruto</div>
-                    <div style="font-weight:700;" class="${lucroBrutoAnoClass}">${formatarMoeda(lucroBrutoAno)}</div>
+                <div class="stat-card" style="flex:1; max-width:200px;">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">${formatarMoeda(totalImpostoAno)}</div>
+                        <div class="stat-label">TOTAL IMPOSTO</div>
+                    </div>
                 </div>
-                <div style="flex:1; text-align:center; padding:1rem; background:var(--bg-card); border-radius:8px;">
-                    <div>Simples (Total Imp.)</div>
-                    <div style="font-weight:700;">${formatarMoeda(totalImpostoAno)}</div>
+                <div class="stat-card" style="flex:1; max-width:200px;">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 12H4M12 4v16" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value ${lucroBrutoAnoClass}" style="font-weight:700;">${formatarMoeda(lucroBrutoAno)}</div>
+                        <div class="stat-label">LUCRO BRUTO</div>
+                    </div>
                 </div>
-            </div>
-            <div style="margin-top:2rem; display:flex; flex-direction:column; align-items:center;">
-                <div style="margin-bottom:0.5rem;">Diferença (R$)</div>
-                <input type="number" id="diferencaInput" step="0.01" value="0" style="max-width:200px; text-align:center;">
-                <div style="margin-top:1rem; font-size:1.2rem; font-weight:700;" id="lucroRealFinal">${formatarMoeda(lucroBrutoAno)}</div>
             </div>
         `;
 
         document.getElementById('relatorioBody').innerHTML = html;
-
-        document.getElementById('diferencaInput').addEventListener('input', function() {
-            const dif = parseFloat(this.value) || 0;
-            const final = lucroBrutoAno - dif;
-            const span = document.getElementById('lucroRealFinal');
-            span.textContent = formatarMoeda(final);
-            span.className = final >= 0 ? 'stat-value-success' : 'stat-value-danger';
-        });
-
     } catch (error) {
         console.error('Erro ao carregar dados anuais', error);
-        document.getElementById('relatorioBody').innerHTML = '<p style="text-align:center;">Erro ao carregar dados.</p>';
+        document.getElementById('relatorioBody').innerHTML = '<p style="text-align:center;">ERRO AO CARREGAR DADOS.</p>';
     }
 }
