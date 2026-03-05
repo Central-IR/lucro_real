@@ -530,17 +530,6 @@ async function renderRelatorio() {
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">${formatarMoeda(totalLucroAno)}</div>
-                        <div class="stat-label">TOTAL LUCRO</div>
-                    </div>
-                </div>
-                <div class="stat-card" style="flex:1; min-width:150px;">
-                    <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 7h16M4 12h16M4 17h10" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
                         <div class="stat-value" style="color:#EF4444;">${formatarMoeda(totalCustoAno)}</div>
                         <div class="stat-label">TOTAL CUSTO</div>
                     </div>
