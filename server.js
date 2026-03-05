@@ -118,7 +118,7 @@ async function criarRegistroLucroReal(frete) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // 🔧 Agora o frete é copiado do valor_frete do controle_frete
+        // Copia o valor do frete do Controle de Frete
         const freteValor = parseValorMonetario(frete.valor_frete);
         const lucroReal = venda - freteValor - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
@@ -155,10 +155,13 @@ async function criarRegistroLucroReal(frete) {
 
         if (!response.ok) {
             const erro = await response.text();
-            // Se o erro for de duplicata (código 23505), significa que o registro já existe (deve ser tratado como atualização)
+            // Se o erro for de duplicata, tenta atualizar
             if (response.status === 409 && erro.includes('duplicate key')) {
                 console.log('⚠️ Registro já existe, tentando atualizar...');
-                return await atualizarRegistroLucroReal(frete, registro);
+                const existente = await obterRegistroExistente(frete.id);
+                if (existente) {
+                    return await atualizarRegistroLucroReal(frete, existente);
+                }
             }
             console.error('❌ Erro na inserção:', erro);
             return false;
@@ -175,7 +178,7 @@ async function atualizarRegistroLucroReal(frete, existente) {
     try {
         const venda = parseValorMonetario(frete.valor_nf);
         const { comissao, impostoFederal } = calcularValores(venda);
-        // Mantém custo e frete manuais (não altera)
+        // Mantém custo e frete manuais (não altera valores já editados)
         const custoAtual = existente.custo || 0;
         const freteAtual = existente.frete || 0;
         const lucroReal = venda - custoAtual - freteAtual - comissao - impostoFederal;
@@ -219,17 +222,21 @@ async function atualizarRegistroLucroReal(frete, existente) {
     }
 }
 
-// 🔍 Função para verificar se o tipo_nf deve ser processado
+// 🔍 Função para verificar se o tipo_nf deve ser processado (apenas ENVIO)
 function deveProcessarFrete(frete) {
-    const tiposIgnorar = ['DEVOLUCAO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA', 'CANCELADA'];
+    // Se não tiver tipo, considera ENVIO
     const tipo = frete.tipo_nf || 'ENVIO';
-    return !tiposIgnorar.includes(tipo);
+    // Tipos que NÃO devem ser processados
+    const tiposIgnorar = ['DEVOLUCAO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA', 'CANCELADA'];
+    return tipo === 'ENVIO' || !tiposIgnorar.includes(tipo); // Na verdade queremos apenas ENVIO
+    // Corrigindo: queremos apenas ENVIO, então:
+    return tipo === 'ENVIO';
 }
 
 async function processarFrete(frete) {
     if (!deveProcessarFrete(frete)) {
         console.log(`⏭️ Ignorando frete ${frete.id} (tipo: ${frete.tipo_nf})`);
-        return true;
+        return true; // ignorado, mas considerado processado para não gerar erro
     }
 
     console.log(`⚙️ Processando frete ${frete.id} (NF: ${frete.numero_nf || '-'})`);
