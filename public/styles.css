@@ -815,6 +815,11 @@ button.small {
     display: none !important;
 }
 
+/* CARD DE LUCRO BRUTO CONDICIONAL */
+#cardLucroBruto .stat-value {
+    transition: color 0.2s ease;
+}
+
 /* RESPONSIVIDADE */
 @media (max-width: 768px) {
     .container {
