@@ -324,7 +324,7 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
         // Recalcular lucro_real e margem_liquida
         const novoCusto = updates.custo !== undefined ? updates.custo : registro.custo;
         const novaComissao = updates.comissao !== undefined ? updates.comissao : registro.comissao;
-        novoImposto = updates.imposto_federal !== undefined ? updates.imposto_federal : registro.imposto_federal;
+        const novoImposto = updates.imposto_federal !== undefined ? updates.imposto_federal : registro.imposto_federal;
 
         updates.lucro_real = registro.venda - novoCusto - registro.frete - novaComissao - novoImposto;
         updates.margem_liquida = registro.venda ? updates.lucro_real / registro.venda : 0;
