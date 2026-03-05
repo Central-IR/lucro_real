@@ -150,8 +150,8 @@ async function criarRegistroLucroReal(pedido) {
         const lucroReal = venda - (pedido.custo || 0) - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // Usar o campo 'nf' do pedido (ou fallback para documento)
-        const numeroNF = pedido.nf || pedido.documento || '-';
+        // ✅ Usa APENAS o campo 'nf' do pedido. Se vazio, exibe '-'
+        const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
         const registro = {
             codigo: pedido.codigo,
@@ -199,7 +199,8 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
         const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        const numeroNF = pedido.nf || pedido.documento || '-';
+        // ✅ Mesma lógica: usa apenas 'nf' ou '-'
+        const numeroNF = pedido.nf && pedido.nf.trim() !== '' ? pedido.nf : '-';
 
         const updates = {
             nf: numeroNF,
