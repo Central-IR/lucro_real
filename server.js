@@ -36,8 +36,8 @@ async function verificarAutenticacao(req, res, next) {
     const publicPaths = [
         '/',
         '/api/health',
-        '/api/test/todos-pedidos',
-        '/api/debug/pedidos',
+        '/api/test/todos-fretes',
+        '/api/debug/fretes',
         '/api/debug/lucro-real',
         '/api/carga-inicial',
         '/api/monitorar-pedidos'
@@ -74,10 +74,10 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ROTA DE TESTE - retorna todos os pedidos
-app.get('/api/test/todos-pedidos', async (req, res) => {
+// ROTA DE TESTE - retorna todos os fretes
+app.get('/api/test/todos-fretes', async (req, res) => {
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=*`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
         });
         if (!response.ok) throw new Error(await response.text());
@@ -91,16 +91,14 @@ app.get('/api/test/todos-pedidos', async (req, res) => {
 // Funções auxiliares
 function parseValorMonetario(valor) {
     if (!valor) return 0;
-    const cleaned = String(valor).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
-    return parseFloat(cleaned) || 0;
+    const num = parseFloat(valor);
+    return isNaN(num) ? 0 : num;
 }
 
-function calcularValores(pedido) {
-    const venda = parseValorMonetario(pedido.valor_total);
-    const frete = parseValorMonetario(pedido.valor_frete);
+function calcularValores(venda) {
     const comissao = venda * (1.25 / 100);
     const impostoFederal = venda * (11 / 100);
-    return { venda, frete, comissao, impostoFederal };
+    return { comissao, impostoFederal };
 }
 
 async function obterRegistroExistente(codigo) {
@@ -116,28 +114,25 @@ async function obterRegistroExistente(codigo) {
     }
 }
 
-async function criarRegistroLucroReal(pedido) {
+async function criarRegistroLucroReal(frete) {
     try {
-        const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
-        const lucroReal = venda - frete - comissao - impostoFederal;
+        const venda = parseValorMonetario(frete.valor_nf);
+        const { comissao, impostoFederal } = calcularValores(venda);
+        // Custo e frete iniciais zero
+        const lucroReal = venda - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        // CORREÇÃO: nf pode ser número, converter para string
-        let numeroNF = '-';
-        if (pedido.nf !== null && pedido.nf !== undefined) {
-            numeroNF = String(pedido.nf).trim();
-            if (numeroNF === '') numeroNF = '-';
-        }
+        const numeroNF = frete.numero_nf && frete.numero_nf.trim() !== '' ? frete.numero_nf : '-';
 
-        const dataEmissao = (pedido.data_emissao || pedido.data_registro || new Date().toISOString()).split('T')[0];
+        const dataEmissao = (frete.data_emissao || new Date().toISOString()).split('T')[0];
 
         const registro = {
-            codigo: pedido.codigo,
+            codigo: frete.id,          // usando o id do controle_frete como chave
             nf: numeroNF,
-            vendedor: pedido.vendedor || pedido.responsavel || '',
+            vendedor: frete.vendedor || '',
             venda: venda,
             custo: 0,
-            frete: frete,
+            frete: 0,
             comissao: comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
@@ -145,7 +140,7 @@ async function criarRegistroLucroReal(pedido) {
             data_emissao: dataEmissao
         };
 
-        console.log('📤 Enviando para Supabase (lucro_real):', JSON.stringify(registro));
+        console.log('📤 Criando registro no lucro_real:', JSON.stringify(registro));
 
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real`, {
             method: 'POST',
@@ -163,7 +158,7 @@ async function criarRegistroLucroReal(pedido) {
             console.error('❌ Erro na inserção:', erro);
             return false;
         }
-        console.log(`✅ Registro criado para pedido ${pedido.codigo}`);
+        console.log(`✅ Registro criado para frete ${frete.id} (NF: ${numeroNF})`);
         return true;
     } catch (error) {
         console.error('❌ Exceção em criarRegistro:', error);
@@ -171,26 +166,24 @@ async function criarRegistroLucroReal(pedido) {
     }
 }
 
-async function atualizarRegistroLucroReal(pedido, existente) {
+async function atualizarRegistroLucroReal(frete, existente) {
     try {
-        const { venda, frete, comissao, impostoFederal } = calcularValores(pedido);
+        const venda = parseValorMonetario(frete.valor_nf);
+        const { comissao, impostoFederal } = calcularValores(venda);
+        // Preserva custo e frete manuais
         const custoAtual = existente.custo || 0;
-        const lucroReal = venda - custoAtual - frete - comissao - impostoFederal;
+        const freteAtual = existente.frete || 0;
+        const lucroReal = venda - custoAtual - freteAtual - comissao - impostoFederal;
         const margemLiquida = venda ? lucroReal / venda : 0;
 
-        let numeroNF = '-';
-        if (pedido.nf !== null && pedido.nf !== undefined) {
-            numeroNF = String(pedido.nf).trim();
-            if (numeroNF === '') numeroNF = '-';
-        }
+        const numeroNF = frete.numero_nf && frete.numero_nf.trim() !== '' ? frete.numero_nf : '-';
 
-        const dataEmissao = (pedido.data_emissao || pedido.data_registro || existente.data_emissao).split('T')[0];
+        const dataEmissao = (frete.data_emissao || existente.data_emissao).split('T')[0];
 
         const updates = {
             nf: numeroNF,
-            vendedor: pedido.vendedor || pedido.responsavel || '',
+            vendedor: frete.vendedor || '',
             venda: venda,
-            frete: frete,
             comissao: comissao,
             imposto_federal: impostoFederal,
             lucro_real: lucroReal,
@@ -198,7 +191,7 @@ async function atualizarRegistroLucroReal(pedido, existente) {
             data_emissao: dataEmissao
         };
 
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${pedido.codigo}`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${frete.id}`, {
             method: 'PATCH',
             headers: {
                 apikey: SUPABASE_KEY,
@@ -214,7 +207,7 @@ async function atualizarRegistroLucroReal(pedido, existente) {
             console.error('❌ Erro na atualização:', erro);
             return false;
         }
-        console.log(`🔄 Registro atualizado para pedido ${pedido.codigo}`);
+        console.log(`🔄 Registro atualizado para frete ${frete.id} (NF: ${numeroNF})`);
         return true;
     } catch (error) {
         console.error('❌ Exceção em atualizarRegistro:', error);
@@ -222,28 +215,28 @@ async function atualizarRegistroLucroReal(pedido, existente) {
     }
 }
 
-async function processarPedido(pedido) {
-    console.log(`⚙️ Processando pedido ${pedido.codigo}`);
-    const existente = await obterRegistroExistente(pedido.codigo);
+async function processarFrete(frete) {
+    console.log(`⚙️ Processando frete ${frete.id} (NF: ${frete.numero_nf || '-'})`);
+    const existente = await obterRegistroExistente(frete.id);
     if (existente) {
-        return await atualizarRegistroLucroReal(pedido, existente);
+        return await atualizarRegistroLucroReal(frete, existente);
     } else {
-        return await criarRegistroLucroReal(pedido);
+        return await criarRegistroLucroReal(frete);
     }
 }
 
-// CARGA COMPLETA (todos os pedidos)
+// CARGA COMPLETA (todos os fretes)
 app.get('/api/carga-inicial', async (req, res) => {
-    console.log('🔄 Iniciando carga completa...');
+    console.log('🔄 Iniciando carga completa de todos os fretes...');
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=*`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
         });
-        const pedidos = await response.json();
-        console.log(`📦 ${pedidos.length} pedidos encontrados`);
+        const fretes = await response.json();
+        console.log(`📦 ${fretes.length} fretes encontrados`);
         let processados = 0;
-        for (const p of pedidos) {
-            if (await processarPedido(p)) processados++;
+        for (const f of fretes) {
+            if (await processarFrete(f)) processados++;
         }
         res.json({ success: true, total: processados });
     } catch (error) {
@@ -254,29 +247,29 @@ app.get('/api/carga-inicial', async (req, res) => {
 
 // MONITORAMENTO RÁPIDO (últimos 2 minutos)
 app.get('/api/monitorar-pedidos', async (req, res) => {
-    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos recentes...`);
+    console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando fretes recentes...`);
     try {
         const doisMinutosAtras = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-        const url = `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&updated_at=gte.${doisMinutosAtras}&order=updated_at.asc`;
+        const url = `${SUPABASE_URL}/rest/v1/controle_frete?select=*&updated_at=gte.${doisMinutosAtras}&order=updated_at.asc`;
         const response = await fetch(url, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
         });
-        const pedidos = await response.json();
-        console.log(`📦 ${pedidos.length} pedidos recentes`);
-        for (const p of pedidos) {
-            await processarPedido(p);
+        const fretes = await response.json();
+        console.log(`📦 ${fretes.length} fretes recentes`);
+        for (const f of fretes) {
+            await processarFrete(f);
         }
-        res.json({ success: true, quantidade: pedidos.length });
+        res.json({ success: true, quantidade: fretes.length });
     } catch (error) {
         console.error('❌ Erro no monitoramento:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// DEBUG: ver pedidos do faturamento
-app.get('/api/debug/pedidos', async (req, res) => {
+// DEBUG: ver fretes do controle_frete
+app.get('/api/debug/fretes', async (req, res) => {
     try {
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo,nf,documento,status,updated_at&order=updated_at.desc&limit=20`, {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/controle_frete?select=id,numero_nf,vendedor,valor_nf,data_emissao,updated_at&order=updated_at.desc&limit=20`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
         });
         const data = await resp.json();
@@ -360,7 +353,7 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
         const novaComissao = updates.comissao ?? registro.comissao;
         const novoImposto = updates.imposto_federal ?? registro.imposto_federal;
 
-        updates.lucro_real = registro.venda - novoCusto - registro.frete - novaComissao - novoImposto;
+        updates.lucro_real = registro.venda - novoCusto - (registro.frete || 0) - novaComissao - novoImposto;
         updates.margem_liquida = registro.venda ? updates.lucro_real / registro.venda : 0;
 
         const response = await fetch(`${SUPABASE_URL}/rest/v1/lucro_real?codigo=eq.${req.params.codigo}`, {
