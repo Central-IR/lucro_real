@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 // MIDDLEWARE DE AUTENTICAÇÃO
 // ==============================
 async function verificarAutenticacao(req, res, next) {
-    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial'];
+    const publicPaths = ['/', '/api/health', '/api/monitorar-pedidos', '/api/carga-inicial', '/api/debug/pedidos'];
 
     if (publicPaths.includes(req.path)) {
         return next();
@@ -222,6 +222,7 @@ async function atualizarRegistroLucroReal(pedido, registroExistente) {
 }
 
 async function processarPedido(pedido) {
+    console.log(`Processando pedido ${pedido.codigo} (NF: ${pedido.nf})`);
     const existente = await obterRegistroExistente(pedido.codigo);
     if (existente) {
         return await atualizarRegistroLucroReal(pedido, existente);
@@ -236,7 +237,7 @@ async function processarPedido(pedido) {
 async function verificarPedidosRecentes() {
     console.log(`🔍 [${new Date().toLocaleTimeString()}] Verificando pedidos emitidos recentes...`);
     try {
-        // Busca pedidos emitidos nos últimos 5 minutos (inclui novos e atualizados)
+        // Busca pedidos emitidos nos últimos 5 minutos
         const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const response = await fetch(
             `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=*&status=eq.emitida&updated_at=gte.${cincoMinutosAtras}`,
@@ -249,7 +250,7 @@ async function verificarPedidosRecentes() {
         );
 
         if (!response.ok) {
-            console.error('Erro ao buscar pedidos');
+            console.error('Erro ao buscar pedidos:', response.status, await response.text());
             return;
         }
 
@@ -269,7 +270,7 @@ async function verificarPedidosRecentes() {
 }
 
 // ==============================
-// CARGA COMPLETA (para garantir sincronia total)
+// CARGA COMPLETA
 // ==============================
 async function cargaCompleta() {
     console.log('🔄 Iniciando carga completa de todos os pedidos emitidos...');
@@ -285,7 +286,7 @@ async function cargaCompleta() {
         );
 
         if (!response.ok) {
-            console.error('❌ Erro na carga completa');
+            console.error('❌ Erro na carga completa:', response.status, await response.text());
             return;
         }
 
@@ -302,6 +303,27 @@ async function cargaCompleta() {
         console.error('❌ Erro na carga completa:', error);
     }
 }
+
+// ==============================
+// ROTA DE DEBUG
+// ==============================
+app.get('/api/debug/pedidos', async (req, res) => {
+    try {
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/pedidos_faturamento?select=codigo,nf,documento,status,updated_at&status=eq.emitida&order=updated_at.desc&limit=20`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // ==============================
 // ROTAS PARA DISPARO MANUAL
@@ -424,12 +446,15 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 // INICIAR MONITORAMENTO
 // ==============================
 // Faz uma carga completa ao iniciar
-setTimeout(cargaCompleta, 5000);
+setTimeout(() => {
+    console.log('⏳ Executando carga inicial...');
+    cargaCompleta();
+}, 5000);
 
 // Monitoramento rápido a cada 30 segundos
 setInterval(verificarPedidosRecentes, 30 * 1000);
 
-// Também uma varredura completa a cada 1 hora para garantir consistência
+// Também uma varredura completa a cada 1 hora
 setInterval(cargaCompleta, 60 * 60 * 1000);
 
 // ==============================
@@ -449,4 +474,5 @@ app.listen(PORT, () => {
     console.log('📦 Supabase conectado');
     console.log('💰 Monitorando pedidos_faturamento (a cada 30s)');
     console.log('🔄 Carga completa a cada 1 hora');
+    console.log('🔍 Rota de debug: /api/debug/pedidos');
 });
