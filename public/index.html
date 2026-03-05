@@ -145,14 +145,6 @@
                             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                         </svg>
                     </button>
-                    <!-- Ícone Diferença (≠) -->
-                    <button class="calendar-btn" onclick="openDiferencaModal()" title="Definir diferença mensal">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="5" y1="19" x2="19" y2="5" />
-                            <line x1="5" y1="5" x2="19" y2="19" />
-                            <circle cx="12" cy="12" r="9" />
-                        </svg>
-                    </button>
                     <button class="calendar-btn" onclick="openRelatorioAnualModal()" title="Relatório Anual">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="20" x2="18" y2="10" />
@@ -231,26 +223,6 @@
             <div class="modal-actions">
                 <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
                 <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DE DIFERENÇA MENSAL -->
-    <div class="modal-overlay" id="diferencaModal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3 class="modal-title">DIFERENÇA - <span id="diferencaMesAno"></span></h3>
-                <button class="close-modal" onclick="closeDiferencaModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="diferencaValor">VALOR (R$)</label>
-                    <input type="number" id="diferencaValor" step="0.01" value="0">
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeDiferencaModal()" class="secondary">CANCELAR</button>
-                <button type="button" onclick="saveDiferenca()" class="btn-save-green">SALVAR</button>
             </div>
         </div>
     </div>
