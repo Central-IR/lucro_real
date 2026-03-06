@@ -392,7 +392,7 @@ async function saveEditModal() {
 }
 
 // ============================================
-// RELATÓRIO ANUAL
+// RELATÓRIO ANUAL (com cards removidos)
 // ============================================
 function openRelatorioAnualModal() {
     relatorioAno = new Date().getFullYear();
@@ -501,14 +501,12 @@ async function renderRelatorio() {
             </div>
         `;
 
-        const totalVendaAno = meses.reduce((acc, m) => acc + m.vendaTotal, 0);
         const totalFreteAno = meses.reduce((acc, m) => acc + m.freteTotal, 0);
-        const totalLucroAno = meses.reduce((acc, m) => acc + m.lucroTotal, 0);
-        const totalCustoAno = meses.reduce((acc, m) => acc + m.custoTotal, 0);
         const totalImpostoAno = meses.reduce((acc, m) => acc + m.impostoTotal, 0);
-        const lucroBrutoAno = totalLucroAno - totalCustoAno;
+        const lucroBrutoAno = meses.reduce((acc, m) => acc + (m.lucroTotal - m.custoTotal), 0);
         const lucroBrutoAnoClass = lucroBrutoAno >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
+        // Cards finais (apenas FRETE, IMPOSTO e LUCRO BRUTO)
         html += `
             <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap: wrap;">
                 <div class="stat-card" style="flex:1; min-width:150px;">
@@ -521,28 +519,6 @@ async function renderRelatorio() {
                     <div class="stat-content">
                         <div class="stat-value" style="color:#3B82F6;">${formatarMoeda(totalFreteAno)}</div>
                         <div class="stat-label">TOTAL FRETE</div>
-                    </div>
-                </div>
-                <div class="stat-card" style="flex:1; min-width:150px;">
-                    <div class="stat-icon stat-icon-default">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">${formatarMoeda(totalLucroAno)}</div>
-                        <div class="stat-label">TOTAL LUCRO</div>
-                    </div>
-                </div>
-                <div class="stat-card" style="flex:1; min-width:150px;">
-                    <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 7h16M4 12h16M4 17h10" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" style="color:#EF4444;">${formatarMoeda(totalCustoAno)}</div>
-                        <div class="stat-label">TOTAL CUSTO</div>
                     </div>
                 </div>
                 <div class="stat-card" style="flex:1; min-width:150px;">
