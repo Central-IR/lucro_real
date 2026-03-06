@@ -256,7 +256,7 @@ function updateTable() {
         filtered = filtered.filter(r => (r.vendedor || '') === filterVendedor);
     }
 
-    // Ordenar por NF (crescente, considerando string)
+    // Ordenar por NF (crescente)
     filtered.sort((a, b) => {
         const nfA = (a.nf || '').padStart(10, '0');
         const nfB = (b.nf || '').padStart(10, '0');
@@ -392,7 +392,7 @@ async function saveEditModal() {
 }
 
 // ============================================
-// RELATÓRIO ANUAL (mesmo código anterior, apenas ajuste nos nomes)
+// RELATÓRIO ANUAL
 // ============================================
 function openRelatorioAnualModal() {
     relatorioAno = new Date().getFullYear();
@@ -527,6 +527,17 @@ async function renderRelatorio() {
                     <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">${formatarMoeda(totalLucroAno)}</div>
+                        <div class="stat-label">TOTAL LUCRO</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="flex:1; min-width:150px;">
+                    <div class="stat-icon" style="background:rgba(239,68,68,0.1); color:#EF4444;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 7h16M4 12h16M4 17h10" />
                         </svg>
                     </div>
                     <div class="stat-content">
