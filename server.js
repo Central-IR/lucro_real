@@ -107,13 +107,27 @@ app.get('/api/test/frete/:id', async (req, res) => {
 // FUNÇÕES AUXILIARES
 // ==============================
 
-// Parse de valores monetários brasileiros (ex: "1.234,56" → 1234.56)
+// Parse de valores monetários: aceita tanto número quanto string no formato brasileiro
 function parseValorMonetario(valor) {
-    if (!valor) return 0;
-    // Converte para string e remove espaços
+    if (valor === null || valor === undefined) return 0;
+    // Se já for número, retorna
+    if (typeof valor === 'number') return valor;
+    // Se for string, limpa formatação brasileira
     let str = String(valor).trim();
-    // Substitui ponto de milhar por nada e vírgula decimal por ponto
-    str = str.replace(/\./g, '').replace(',', '.');
+    // Remove "R$" se houver
+    str = str.replace('R$', '').trim();
+    // Troca vírgula decimal por ponto
+    str = str.replace(',', '.');
+    // Remove pontos de milhar (que estão antes do ponto decimal)
+    // Ex: 1.234,56 -> após trocar vírgula, fica 1.234.56, então precisamos remover o ponto que separa milhar
+    // A estratégia: manter apenas o último ponto como decimal, remover os outros
+    const partes = str.split('.');
+    if (partes.length > 2) {
+        // Mais de um ponto, provavelmente tem separador de milhar
+        // Reconstroi: o último é decimal, os anteriores são milhar (junta)
+        const decimal = partes.pop();
+        str = partes.join('') + '.' + decimal;
+    }
     const num = parseFloat(str);
     return isNaN(num) ? 0 : num;
 }
@@ -249,15 +263,12 @@ async function atualizarRegistroLucroReal(frete, existente) {
 // 🔍 Função para verificar se o tipo_nf deve ser processado (apenas ENVIO)
 function deveProcessarFrete(frete) {
     const tipo = frete.tipo_nf || 'ENVIO';
-    // Apenas ENVIO deve ser processado
     return tipo === 'ENVIO';
 }
 
 async function processarFrete(frete) {
     if (!deveProcessarFrete(frete)) {
         console.log(`⏭️ Ignorando frete ${frete.id} (tipo: ${frete.tipo_nf})`);
-        // Se existir um registro desse frete no lucro_real (por engano), podemos removê-lo?
-        // Opcional: deletar registros órfãos
         return true;
     }
 
@@ -435,12 +446,10 @@ app.get('*', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    // Carga inicial após 3 segundos
     setTimeout(() => {
         console.log('⏳ Executando carga inicial...');
         fetch(`http://localhost:${PORT}/api/carga-inicial`).catch(console.error);
     }, 3000);
-    // Monitoramento a cada 15 segundos
     setInterval(() => {
         fetch(`http://localhost:${PORT}/api/monitorar-pedidos`).catch(console.error);
     }, 15 * 1000);
