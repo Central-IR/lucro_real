@@ -189,9 +189,6 @@ function updateDisplay() {
     updateVendedoresFilter();
 }
 
-// ============================================
-// ATUALIZAR DASHBOARD (comissão não exibida)
-// ============================================
 function updateDashboard() {
     let totalVenda = 0, totalCusto = 0, totalFrete = 0, totalComissao = 0, totalImposto = 0;
 
@@ -199,14 +196,13 @@ function updateDashboard() {
         totalVenda += r.venda || 0;
         totalCusto += r.custo || 0;
         totalFrete += r.frete || 0;
-        totalComissao += r.comissao || 0;      // ainda calculada para uso interno
+        totalComissao += r.comissao || 0;
         totalImposto += r.imposto_federal || 0;
     });
 
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
     document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700;">${formatarMoeda(totalCusto)}</span>`;
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
-    // Elemento 'totalComissao' foi removido, não tentamos defini-lo
     document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
 
     const lucroBruto = totalVenda - totalCusto;
@@ -328,9 +324,10 @@ function showMessage(message, type = 'success') {
 }
 
 // ============================================
-// MODAL DE EDIÇÃO (um clique)
+// MODAL DE EDIÇÃO (um clique + tecla Enter)
 // ============================================
 let currentEditCodigo = null;
+let enterListenersAttached = false;
 
 function abrirEditModal(codigo) {
     const registro = lucroData.find(r => r.codigo === codigo);
@@ -343,10 +340,35 @@ function abrirEditModal(codigo) {
     document.getElementById('editComissao').value = registro.comissao || 0;
     document.getElementById('editImposto').value = registro.imposto_federal || 0;
 
+    // Adiciona listeners para tecla Enter nos inputs
+    const inputs = ['editCusto', 'editComissao', 'editImposto'];
+    inputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('keydown', handleEnterKey);
+        }
+    });
+
     document.getElementById('editModal').classList.add('show');
 }
 
+function handleEnterKey(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault(); // Evita comportamento padrão (como submeter formulário)
+        saveEditModal();
+    }
+}
+
 function closeEditModal() {
+    // Remove listeners de tecla Enter
+    const inputs = ['editCusto', 'editComissao', 'editImposto'];
+    inputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.removeEventListener('keydown', handleEnterKey);
+        }
+    });
+
     document.getElementById('editModal').classList.remove('show');
     currentEditCodigo = null;
 }
@@ -395,7 +417,7 @@ async function saveEditModal() {
 }
 
 // ============================================
-// RELATÓRIO ANUAL (com cards removidos)
+// RELATÓRIO ANUAL
 // ============================================
 function openRelatorioAnualModal() {
     relatorioAno = new Date().getFullYear();
@@ -509,7 +531,6 @@ async function renderRelatorio() {
         const lucroBrutoAno = meses.reduce((acc, m) => acc + (m.lucroTotal - m.custoTotal), 0);
         const lucroBrutoAnoClass = lucroBrutoAno >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
-        // Cards finais (apenas FRETE, IMPOSTO e LUCRO BRUTO)
         html += `
             <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0 0; flex-wrap: wrap;">
                 <div class="stat-card" style="flex:1; min-width:150px;">
