@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <!-- Dashboard Cards -->
+            <!-- Dashboard Cards (comissão removida) -->
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-icon stat-icon-success">
@@ -29,7 +29,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalVenda">R$ 0,00</div>
-                        <div class="stat-label">Venda</div>
+                        <div class="stat-label">VENDA</div>
                     </div>
                 </div>
                 
@@ -41,7 +41,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" style="color: #EF4444; font-weight: 700;" id="totalCusto">R$ 0,00</div>
-                        <div class="stat-label">Custo</div>
+                        <div class="stat-label">CUSTO</div>
                     </div>
                 </div>
                 
@@ -54,21 +54,11 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" style="color: #3B82F6; font-weight: 700;" id="totalFrete">R$ 0,00</div>
-                        <div class="stat-label">Frete</div>
+                        <div class="stat-label">FRETE</div>
                     </div>
                 </div>
                 
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-default">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 12H4M12 4v16" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="totalComissao">R$ 0,00</div>
-                        <div class="stat-label">Comissão</div>
-                    </div>
-                </div>
+                <!-- Card de COMISSÃO removido -->
                 
                 <div class="stat-card">
                     <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
@@ -78,7 +68,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" style="color: #EF4444;" id="totalImposto">R$ 0,00</div>
-                        <div class="stat-label">Imp Federal</div>
+                        <div class="stat-label">IMP FED</div>
                     </div>
                 </div>
 
@@ -91,12 +81,12 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
-                        <div class="stat-label">Lucro Bruto</div>
+                        <div class="stat-label">LUCRO BRUTO (MÊS)</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Search Bar with Filters -->
+            <!-- Search Bar with Filters (igual) -->
             <div class="search-bar-wrapper">
                 <div class="search-bar">
                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -199,56 +189,56 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO (um clique) -->
-<div class="modal-overlay" id="editModal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
-            <h3 class="modal-title">EDITAR VALORES - NF <span id="editNF"></span></h3>
-            <button class="close-modal" onclick="closeEditModal()">✕</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="editCusto">CUSTO (R$)</label>
-                <input type="number" id="editCusto" step="0.01" min="0" max="5000000">
+    <!-- MODAL DE EDIÇÃO -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">EDITAR VALORES - NF <span id="editNF"></span></h3>
+                <button class="close-modal" onclick="closeEditModal()">✕</button>
             </div>
-            <div class="form-group">
-                <label for="editComissao">COMISSÃO (R$)</label>
-                <input type="number" id="editComissao" step="0.01" min="0">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editCusto">CUSTO (R$)</label>
+                    <input type="number" id="editCusto" step="0.01" min="0" max="5000000">
+                </div>
+                <div class="form-group">
+                    <label for="editComissao">COMISSÃO (R$)</label>
+                    <input type="number" id="editComissao" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editImposto">IMPOSTO FEDERAL (R$)</label>
+                    <input type="number" id="editImposto" step="0.01" min="0">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="editImposto">IMPOSTO FEDERAL (R$)</label>
-                <input type="number" id="editImposto" step="0.01" min="0">
+            <div class="modal-actions">
+                <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
+                <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
             </div>
-        </div>
-        <div class="modal-actions">
-            <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
-            <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
         </div>
     </div>
-</div>
 
-<!-- MODAL DE RELATÓRIO ANUAL -->
-<div class="modal-overlay" id="relatorioModal">
-    <div class="modal-content modal-large">
-        <div class="modal-header">
-            <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
-                <button onclick="changeRelatorioYear(-1)" class="year-nav-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-                <h3 class="modal-title" id="relatorioAnoTitulo" style="flex:1; text-align:center; margin:0;">2026</h3>
-                <button onclick="changeRelatorioYear(1)" class="year-nav-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </button>
+    <!-- MODAL DE RELATÓRIO ANUAL -->
+    <div class="modal-overlay" id="relatorioModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+                    <button onclick="changeRelatorioYear(-1)" class="year-nav-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <h3 class="modal-title" id="relatorioAnoTitulo" style="flex:1; text-align:center; margin:0;">2026</h3>
+                    <button onclick="changeRelatorioYear(1)" class="year-nav-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <button class="close-modal" onclick="closeRelatorioModal()">✕</button>
             </div>
-            <button class="close-modal" onclick="closeRelatorioModal()">✕</button>
+            <div class="modal-body" id="relatorioBody"></div>
         </div>
-        <div class="modal-body" id="relatorioBody"></div>
     </div>
-</div>
 
     <script src="script.js"></script>
     <script src="calendar.js"></script>
