@@ -200,46 +200,55 @@
     </div>
 
     <!-- MODAL DE EDIÇÃO (um clique) -->
-    <div class="modal-overlay" id="editModal">
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="modal-header">
-                <h3 class="modal-title">Definição de Custo - NF <span id="editNF"></span></h3>
-                <button class="close-modal" onclick="closeEditModal()">✕</button>
+<div class="modal-overlay" id="editModal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 class="modal-title">EDITAR VALORES - NF <span id="editNF"></span></h3>
+            <button class="close-modal" onclick="closeEditModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="editCusto">CUSTO (R$)</label>
+                <input type="number" id="editCusto" step="0.01" min="0" max="5000000">
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="editCusto">CUSTO (R$)</label>
-                    <input type="number" id="editCusto" step="0.01" min="0" max="5000000">
-                </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeEditModal()" class="secondary">Cancelar</button>
-                <button type="button" onclick="saveEditModal()" class="btn-save-green">Salvar</button>
+            <div class="form-group">
+                <label for="editComissao">COMISSÃO (R$)</label>
+                <input type="number" id="editComissao" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+                <label for="editImposto">IMPOSTO FEDERAL (R$)</label>
+                <input type="number" id="editImposto" step="0.01" min="0">
             </div>
         </div>
+        <div class="modal-actions">
+            <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
+            <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
+        </div>
     </div>
+</div>
 
-    <!-- MODAL DE RELATÓRIO ANUAL -->
-    <div class="modal-overlay" id="relatorioModal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
-                    <button onclick="changeRelatorioYear(-1)" class="year-nav-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15 18 9 12 15 6" />
-                        </svg>
-                    </button>
-                    <h3 class="modal-title" id="relatorioAnoTitulo" style="flex:1; text-align:center; margin:0;">2026</h3>
-                    <button onclick="changeRelatorioYear(1)" class="year-nav-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                    </button>
-                </div>
-                <button class="close-modal" onclick="closeRelatorioModal()">✕</button>
+<!-- MODAL DE RELATÓRIO ANUAL -->
+<div class="modal-overlay" id="relatorioModal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+                <button onclick="changeRelatorioYear(-1)" class="year-nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h3 class="modal-title" id="relatorioAnoTitulo" style="flex:1; text-align:center; margin:0;">2026</h3>
+                <button onclick="changeRelatorioYear(1)" class="year-nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
             </div>
-            <div class="modal-body" id="relatorioBody"></div>
+            <button class="close-modal" onclick="closeRelatorioModal()">✕</button>
         </div>
+        <div class="modal-body" id="relatorioBody"></div>
     </div>
+</div>
 
     <script src="script.js"></script>
     <script src="calendar.js"></script>
