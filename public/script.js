@@ -209,20 +209,23 @@ function updateDashboard() {
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
     document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
     document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
-    document.getElementById('totalLucroReal').innerHTML = formatarMoeda(totalLucroReal);
 
+    // Aplica cor amarela ao LUCRO REAL
+    const lucroRealElement = document.getElementById('totalLucroReal');
+    lucroRealElement.innerHTML = formatarMoeda(totalLucroReal);
+    lucroRealElement.className = 'stat-value stat-value-warning'; // remove classes anteriores e aplica a warning
+
+    // LUCRO BRUTO com cor dinâmica
     const lucroBruto = totalVenda - totalCusto;
     const lbElement = document.getElementById('totalLucroBruto');
     lbElement.innerHTML = formatarMoeda(lucroBruto);
+    lbElement.className = 'stat-value'; // reseta classes
     if (lucroBruto > 0) {
-        lbElement.style.color = '#22C55E';
-        lbElement.style.fontWeight = '700';
+        lbElement.classList.add('stat-value-success'); // verde
     } else if (lucroBruto < 0) {
-        lbElement.style.color = '#EF4444';
-        lbElement.style.fontWeight = '700';
+        lbElement.classList.add('stat-value-danger'); // vermelho
     } else {
-        lbElement.style.color = '';
-        lbElement.style.fontWeight = '';
+        lbElement.style.color = ''; // cor padrão
     }
 }
 
