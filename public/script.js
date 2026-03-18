@@ -19,7 +19,7 @@ const mesesPorPagina = 3;
 
 let calendarYear = new Date().getFullYear();
 
-let custoFixoMensal = 0; // Valor do custo fixo do mês (para o card LUCRO REAL)
+let custoFixoMensal = 0; // Valor do custo fixo do mês
 
 // ============================================
 // INICIALIZAÇÃO E AUTENTICAÇÃO
@@ -229,7 +229,7 @@ function changeMonth(direction) {
     lastDataHash = '';
     updateMonthDisplay();
     updateTable();
-    loadLucroReal(); // já chama loadCustoFixoMensal internamente
+    loadLucroReal();
 }
 
 function updateMonthDisplay() {
@@ -277,34 +277,22 @@ function updateDashboard() {
     lucroBrutoElement.innerHTML = formatarMoeda(totalLucroBruto);
     lucroBrutoElement.className = 'stat-value stat-value-warning';
 
-    // LUCRO REAL (custo fixo mensal) - dinâmico
+    // LUCRO REAL = LUCRO BRUTO - CUSTO FIXO MENSAL
+    const lucroRealCalculado = totalLucroBruto - custoFixoMensal;
     const lucroRealElement = document.getElementById('totalLucroReal');
     const iconLucroReal = document.getElementById('iconLucroReal');
 
-    let valorExibido = custoFixoMensal;
-    let sinal = '';
-    let corClasse = '';
-    let iconClasse = '';
+    lucroRealElement.innerHTML = formatarMoeda(lucroRealCalculado);
+    lucroRealElement.className = 'stat-value';
+    iconLucroReal.className = 'stat-icon';
 
-    if (totalLucroBruto >= custoFixoMensal) {
-        // Positivo: sem sinal, verde
-        sinal = '';
-        corClasse = 'stat-value-success';
-        iconClasse = 'stat-icon-success';
+    if (lucroRealCalculado >= 0) {
+        lucroRealElement.classList.add('stat-value-success');
+        iconLucroReal.classList.add('stat-icon-success');
     } else {
-        // Negativo: com sinal de menos, vermelho
-        sinal = '-';
-        corClasse = 'stat-value-danger';
-        iconClasse = 'stat-icon-danger';
+        lucroRealElement.classList.add('stat-value-danger');
+        iconLucroReal.classList.add('stat-icon-danger');
     }
-
-    // Formata o número sem o "R$" para podermos adicionar o sinal manualmente
-    const valorFormatado = formatarMoeda(custoFixoMensal).replace('R$ ', '');
-    lucroRealElement.innerHTML = sinal + valorFormatado;
-    lucroRealElement.className = `stat-value ${corClasse}`;
-
-    // Ajusta ícone
-    iconLucroReal.className = `stat-icon ${iconClasse}`;
 }
 
 function updateVendedoresFilter() {
