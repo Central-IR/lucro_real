@@ -532,13 +532,13 @@ async function renderRelatorio() {
         const meses = Array(12).fill().map(() => ({
             freteTotal: 0,
             vendaTotal: 0,
-            lucroTotal: 0,
+            lucroBruto: 0,        // soma do lucro de cada venda (venda - custo - frete - comissão - imposto)
             custoTotal: 0,
             impostoTotal: 0,
             custoFixoMensal: 0
         }));
 
-        // Primeiro, calcular totais de cada mês e também capturar o custo fixo mensal (assumindo que todas as linhas do mês têm o mesmo valor)
+        // Agrupar por mês
         dadosAno.forEach(r => {
             const data = new Date(r.data_emissao + 'T00:00:00');
             const mes = data.getMonth();
@@ -546,10 +546,10 @@ async function renderRelatorio() {
             const lucro = (venda - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0));
             meses[mes].freteTotal += r.frete || 0;
             meses[mes].vendaTotal += venda;
-            meses[mes].lucroTotal += lucro;
+            meses[mes].lucroBruto += lucro;
             meses[mes].custoTotal += r.custo || 0;
             meses[mes].impostoTotal += r.imposto_federal || 0;
-            // Pega o custo fixo da primeira linha do mês (todas devem ser iguais)
+            // Captura o custo fixo (considera que todas as linhas do mês têm o mesmo valor)
             if (r.custo_fixo_mensal !== undefined && meses[mes].custoFixoMensal === 0) {
                 meses[mes].custoFixoMensal = parseFloat(r.custo_fixo_mensal) || 0;
             }
@@ -569,16 +569,17 @@ async function renderRelatorio() {
             const mesIndex = inicio + idx;
             const m = meses[mesIndex];
             const percentualFrete = m.vendaTotal ? ((m.freteTotal / m.vendaTotal) * 100).toFixed(2) : '0.00';
-            const lucroBruto = m.lucroTotal - m.custoTotal;
-            const lucroBrutoClass = lucroBruto >= 0 ? 'stat-value-success' : 'stat-value-danger';
+            const lucroReal = m.lucroBruto - m.custoFixoMensal;
+            const lucroRealClass = lucroReal >= 0 ? 'stat-value-success' : 'stat-value-danger';
             
+            // Tendência baseada no Lucro Bruto (ou pode ser no Lucro Real, tanto faz)
             let tendencia = '';
             if (mesIndex > 0) {
                 const mesAnt = meses[mesIndex - 1];
-                const lucroBrutoAnt = mesAnt.lucroTotal - mesAnt.custoTotal;
-                if (lucroBruto > lucroBrutoAnt) {
+                const lucroBrutoAnt = mesAnt.lucroBruto;
+                if (m.lucroBruto > lucroBrutoAnt) {
                     tendencia = '<span style="color:#22C55E; font-weight:bold; margin-left:0.5rem;">▲</span>';
-                } else if (lucroBruto < lucroBrutoAnt) {
+                } else if (m.lucroBruto < lucroBrutoAnt) {
                     tendencia = '<span style="color:#EF4444; font-weight:bold; margin-left:0.5rem;">▼</span>';
                 }
             }
@@ -589,17 +590,33 @@ async function renderRelatorio() {
                         <h4 style="margin:0 0 0.5rem 0; color: var(--text-primary);">${nome}</h4>
                         ${tendencia}
                     </div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Frete:</span> <span style="color: #3B82F6;">${percentualFrete}%</span></div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Lucro:</span> ${formatarMoeda(m.lucroTotal)}</div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Custo:</span> ${formatarMoeda(m.custoTotal)}</div>
-                    <div style="margin-bottom:0.5rem;"><span style="font-weight: 700;">Lucro Bruto:</span> <span class="${lucroBrutoClass}">${formatarMoeda(lucroBruto)}</span></div>
-                    <div><span style="font-weight: 700;">Custo Fixo:</span> ${formatarMoeda(m.custoFixoMensal)}</div>
+                    <div style="margin-bottom:0.5rem;">
+                        <span style="font-weight: 700;">Frete:</span> 
+                        <span style="color: #3B82F6;">${percentualFrete}%</span>
+                    </div>
+                    <div style="margin-bottom:0.5rem;">
+                        <span style="font-weight: 700;">Lucro Bruto:</span> 
+                        ${formatarMoeda(m.lucroBruto)}
+                    </div>
+                    <div style="margin-bottom:0.5rem;">
+                        <span style="font-weight: 700;">Custo:</span> 
+                        ${formatarMoeda(m.custoTotal)}
+                    </div>
+                    <div style="margin-bottom:0.5rem;">
+                        <span style="font-weight: 700;">Lucro Real:</span> 
+                        <span class="${lucroRealClass}">${formatarMoeda(lucroReal)}</span>
+                    </div>
+                    <div>
+                        <span style="font-weight: 700;">Custo Fixo:</span> 
+                        ${formatarMoeda(m.custoFixoMensal)}
+                    </div>
                 </div>
             `;
         });
 
         html += '</div>';
 
+        // Restante do código (paginação e cards anuais) permanece igual
         html += `
             <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
                 <button onclick="changeRelatorioPagina(-1)" ${relatorioPagina === 1 ? 'disabled' : ''} 
@@ -610,10 +627,10 @@ async function renderRelatorio() {
             </div>
         `;
 
-        // Calcular totais anuais
+        // Totais anuais
         const totalFreteAno = meses.reduce((acc, m) => acc + m.freteTotal, 0);
         const totalImpostoAno = meses.reduce((acc, m) => acc + m.impostoTotal, 0);
-        const lucroRealAnual = meses.reduce((acc, m) => acc + (m.lucroTotal - m.custoFixoMensal), 0);
+        const lucroRealAnual = meses.reduce((acc, m) => acc + (m.lucroBruto - m.custoFixoMensal), 0);
         const lucroRealAnualClass = lucroRealAnual >= 0 ? 'stat-value-success' : 'stat-value-danger';
 
         html += `
