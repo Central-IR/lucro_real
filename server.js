@@ -438,6 +438,10 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
 // NOVAS ROTAS: CUSTO FIXO MENSAL
 // ============================================
 
+// ============================================
+// CUSTO FIXO MENSAL (armazenado na tabela lucro_real)
+// ============================================
+
 // Buscar custo fixo de um mês/ano
 app.get('/api/custo-fixo', verificarAutenticacao, async (req, res) => {
     const { mes, ano } = req.query;
@@ -446,23 +450,34 @@ app.get('/api/custo-fixo', verificarAutenticacao, async (req, res) => {
     }
 
     try {
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/custo_fixo_mensal?select=valor&mes=eq.${parseInt(mes)}&ano=eq.${parseInt(ano)}`,
-            {
-                headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-            }
-        );
-        if (!response.ok) throw new Error('Erro ao buscar custo fixo');
+        // Define o intervalo do mês
+        const startDate = new Date(parseInt(ano), parseInt(mes), 1).toISOString().split('T')[0];
+        const endDate = new Date(parseInt(ano), parseInt(mes) + 1, 0).toISOString().split('T')[0];
+
+        // Busca a primeira linha do mês (para obter o custo_fixo_mensal)
+        const url = `${SUPABASE_URL}/rest/v1/lucro_real?select=custo_fixo_mensal&data_emissao=gte.${startDate}&data_emissao=lte.${endDate}&limit=1`;
+        
+        const response = await fetch(url, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Erro ao buscar custo fixo:', errorText);
+            return res.status(500).json({ error: 'Erro ao consultar banco' });
+        }
+
         const data = await response.json();
-        // Retorna o valor do primeiro registro ou 0
-        res.json({ valor: data[0]?.valor || 0 });
+        // Se encontrou alguma linha, retorna o valor; senão, 0
+        const valor = data.length > 0 ? (data[0].custo_fixo_mensal || 0) : 0;
+        res.json({ valor });
     } catch (error) {
-        console.error('Erro ao buscar custo fixo:', error);
-        res.status(500).json({ error: 'Erro interno' });
+        console.error('🔥 Exceção:', error.message);
+        res.status(500).json({ error: 'Erro interno', details: error.message });
     }
 });
 
-// Salvar ou atualizar custo fixo
+// Salvar custo fixo (atualiza todas as linhas do mês)
 app.post('/api/custo-fixo', verificarAutenticacao, async (req, res) => {
     const { mes, ano, valor } = req.body;
     if (mes === undefined || ano === undefined || valor === undefined) {
@@ -470,60 +485,33 @@ app.post('/api/custo-fixo', verificarAutenticacao, async (req, res) => {
     }
 
     try {
-        // Verifica se já existe registro para este mês/ano
-        const checkResponse = await fetch(
-            `${SUPABASE_URL}/rest/v1/custo_fixo_mensal?select=id&mes=eq.${parseInt(mes)}&ano=eq.${parseInt(ano)}`,
-            {
-                headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-            }
-        );
-        const existing = await checkResponse.json();
+        const startDate = new Date(parseInt(ano), parseInt(mes), 1).toISOString().split('T')[0];
+        const endDate = new Date(parseInt(ano), parseInt(mes) + 1, 0).toISOString().split('T')[0];
 
-        let response;
-        if (existing.length > 0) {
-            // Atualiza
-            response = await fetch(
-                `${SUPABASE_URL}/rest/v1/custo_fixo_mensal?mes=eq.${parseInt(mes)}&ano=eq.${parseInt(ano)}`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        apikey: SUPABASE_KEY,
-                        Authorization: `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json',
-                        Prefer: 'return=representation'
-                    },
-                    body: JSON.stringify({ valor: parseFloat(valor) })
-                }
-            );
-        } else {
-            // Insere novo
-            response = await fetch(`${SUPABASE_URL}/rest/v1/custo_fixo_mensal`, {
-                method: 'POST',
-                headers: {
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    Prefer: 'return=representation'
-                },
-                body: JSON.stringify({
-                    mes: parseInt(mes),
-                    ano: parseInt(ano),
-                    valor: parseFloat(valor)
-                })
-            });
-        }
+        // Atualiza todas as linhas do mês com o novo valor
+        const url = `${SUPABASE_URL}/rest/v1/lucro_real?data_emissao=gte.${startDate}&data_emissao=lte.${endDate}`;
+        
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=representation'
+            },
+            body: JSON.stringify({ custo_fixo_mensal: parseFloat(valor) })
+        });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Erro ao salvar custo fixo:', errorText);
-            throw new Error('Erro ao salvar custo fixo');
+            console.error('❌ Erro ao atualizar custo fixo:', errorText);
+            return res.status(500).json({ error: 'Erro ao salvar no banco' });
         }
 
-        const data = await response.json();
-        res.json({ success: true, data });
+        res.json({ success: true });
     } catch (error) {
-        console.error('Erro ao salvar custo fixo:', error);
-        res.status(500).json({ error: 'Erro interno' });
+        console.error('🔥 Exceção:', error.message);
+        res.status(500).json({ error: 'Erro interno', details: error.message });
     }
 });
 
