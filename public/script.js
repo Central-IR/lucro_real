@@ -204,22 +204,23 @@ function updateDashboard() {
         totalLucroReal += lucroReal;
     });
 
+    // Atualiza os cards
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
     document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700;">${formatarMoeda(totalCusto)}</span>`;
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
     document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
     document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
 
-    // Aplica cor amarela ao LUCRO REAL
+    // LUCRO REAL (sempre amarelo)
     const lucroRealElement = document.getElementById('totalLucroReal');
     lucroRealElement.innerHTML = formatarMoeda(totalLucroReal);
-    lucroRealElement.className = 'stat-value stat-value-warning'; // remove classes anteriores e aplica a warning
+    lucroRealElement.className = 'stat-value stat-value-warning'; // classe para amarelo
 
-    // LUCRO BRUTO com cor dinâmica
-    const lucroBruto = totalVenda - totalCusto;
+    // LUCRO BRUTO = totalLucroReal - totalCusto
+    const lucroBruto = totalLucroReal - totalCusto;
     const lbElement = document.getElementById('totalLucroBruto');
     lbElement.innerHTML = formatarMoeda(lucroBruto);
-    lbElement.className = 'stat-value'; // reseta classes
+    lbElement.className = 'stat-value'; // remove classes anteriores
     if (lucroBruto > 0) {
         lbElement.classList.add('stat-value-success'); // verde
     } else if (lucroBruto < 0) {
