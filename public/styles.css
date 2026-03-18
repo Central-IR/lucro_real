@@ -514,7 +514,8 @@ h1 {
 }
 
 .stat-value-warning {
-    color: #ff521d;
+    color: #F59E0B; /* laranja/âmbar */
+    font-weight: 700;
 }
 
 .stat-value-info {
