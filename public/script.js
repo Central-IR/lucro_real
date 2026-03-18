@@ -1,7 +1,7 @@
 // ============================================
 // CONFIGURAÇÃO
 // ============================================
-const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
+const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com/portal/';
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3004/api'
     : `${window.location.origin}/api`;
