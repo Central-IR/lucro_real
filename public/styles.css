@@ -488,18 +488,18 @@ h1 {
 }
 
 .stat-icon-warning {
-    background: rgba(245, 158, 11, 0.1);
-    color: #F59E0B;
-}
-
-.stat-icon-danger {
-    background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
+    background: rgba(255, 82, 29, 0.1);
+    color: #ff521d;
 }
 
 .stat-icon-info {
     background: rgba(59, 130, 246, 0.1);
     color: #3B82F6;
+}
+
+.stat-icon-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
 }
 
 .stat-content {
@@ -854,7 +854,7 @@ button.small {
 }
 
 /* CARD DE LUCRO BRUTO CONDICIONAL */
-#cardLucroBruto .stat-value {
+#cardLucroReal .stat-value {
     transition: color 0.2s ease;
 }
 
