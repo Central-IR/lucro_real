@@ -502,6 +502,12 @@ h1 {
     color: #EF4444;
 }
 
+/* Nova classe para COMISSÃO (amarelo claro) */
+.stat-icon-commission {
+    background: rgba(251, 191, 36, 0.2);
+    color: #FBBF24;
+}
+
 .stat-content {
     flex: 1;
 }
@@ -529,6 +535,12 @@ h1 {
 
 .stat-value-danger {
     color: #EF4444;
+}
+
+/* Nova classe para o valor da COMISSÃO */
+.stat-value-commission {
+    color: #FBBF24;
+    font-weight: 700;
 }
 
 .stat-label {
