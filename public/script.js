@@ -207,9 +207,9 @@ function updateDashboard() {
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
     document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700;">${formatarMoeda(totalCusto)}</span>`;
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
-    document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);  // novo
+    document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
     document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
-    document.getElementById('totalLucroReal').innerHTML = formatarMoeda(totalLucroReal); // novo
+    document.getElementById('totalLucroReal').innerHTML = formatarMoeda(totalLucroReal);
 
     const lucroBruto = totalVenda - totalCusto;
     const lbElement = document.getElementById('totalLucroBruto');
