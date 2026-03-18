@@ -488,8 +488,13 @@ h1 {
 }
 
 .stat-icon-warning {
-    background: rgba(255, 82, 29, 0.1);
-    color: #ff521d;
+    background: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+}
+
+.stat-icon-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
 }
 
 .stat-icon-info {
