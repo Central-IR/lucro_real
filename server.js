@@ -119,12 +119,9 @@ function parseValorMonetario(valor) {
     // Troca vírgula decimal por ponto
     str = str.replace(',', '.');
     // Remove pontos de milhar (que estão antes do ponto decimal)
-    // Ex: 1.234,56 -> após trocar vírgula, fica 1.234.56, então precisamos remover o ponto que separa milhar
-    // A estratégia: manter apenas o último ponto como decimal, remover os outros
     const partes = str.split('.');
     if (partes.length > 2) {
         // Mais de um ponto, provavelmente tem separador de milhar
-        // Reconstroi: o último é decimal, os anteriores são milhar (junta)
         const decimal = partes.pop();
         str = partes.join('') + '.' + decimal;
     }
@@ -434,6 +431,99 @@ app.patch('/api/lucro-real/:codigo', verificarAutenticacao, async (req, res) => 
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Erro ao atualizar lucro real', details: error.message });
+    }
+});
+
+// ============================================
+// NOVAS ROTAS: CUSTO FIXO MENSAL
+// ============================================
+
+// Buscar custo fixo de um mês/ano
+app.get('/api/custo-fixo', verificarAutenticacao, async (req, res) => {
+    const { mes, ano } = req.query;
+    if (mes === undefined || ano === undefined) {
+        return res.status(400).json({ error: 'Mês e ano são obrigatórios' });
+    }
+
+    try {
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/custo_fixo_mensal?select=valor&mes=eq.${parseInt(mes)}&ano=eq.${parseInt(ano)}`,
+            {
+                headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+            }
+        );
+        if (!response.ok) throw new Error('Erro ao buscar custo fixo');
+        const data = await response.json();
+        // Retorna o valor do primeiro registro ou 0
+        res.json({ valor: data[0]?.valor || 0 });
+    } catch (error) {
+        console.error('Erro ao buscar custo fixo:', error);
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+// Salvar ou atualizar custo fixo
+app.post('/api/custo-fixo', verificarAutenticacao, async (req, res) => {
+    const { mes, ano, valor } = req.body;
+    if (mes === undefined || ano === undefined || valor === undefined) {
+        return res.status(400).json({ error: 'Mês, ano e valor são obrigatórios' });
+    }
+
+    try {
+        // Verifica se já existe registro para este mês/ano
+        const checkResponse = await fetch(
+            `${SUPABASE_URL}/rest/v1/custo_fixo_mensal?select=id&mes=eq.${parseInt(mes)}&ano=eq.${parseInt(ano)}`,
+            {
+                headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+            }
+        );
+        const existing = await checkResponse.json();
+
+        let response;
+        if (existing.length > 0) {
+            // Atualiza
+            response = await fetch(
+                `${SUPABASE_URL}/rest/v1/custo_fixo_mensal?mes=eq.${parseInt(mes)}&ano=eq.${parseInt(ano)}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: SUPABASE_KEY,
+                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        Prefer: 'return=representation'
+                    },
+                    body: JSON.stringify({ valor: parseFloat(valor) })
+                }
+            );
+        } else {
+            // Insere novo
+            response = await fetch(`${SUPABASE_URL}/rest/v1/custo_fixo_mensal`, {
+                method: 'POST',
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    Prefer: 'return=representation'
+                },
+                body: JSON.stringify({
+                    mes: parseInt(mes),
+                    ano: parseInt(ano),
+                    valor: parseFloat(valor)
+                })
+            });
+        }
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erro ao salvar custo fixo:', errorText);
+            throw new Error('Erro ao salvar custo fixo');
+        }
+
+        const data = await response.json();
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Erro ao salvar custo fixo:', error);
+        res.status(500).json({ error: 'Erro interno' });
     }
 });
 
