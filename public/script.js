@@ -19,6 +19,8 @@ const mesesPorPagina = 3;
 
 let calendarYear = new Date().getFullYear();
 
+let custoFixoMensal = 0; // Valor do custo fixo do mês (para o card LUCRO REAL)
+
 // ============================================
 // INICIALIZAÇÃO E AUTENTICAÇÃO
 // ============================================
@@ -113,7 +115,7 @@ async function syncData() {
 }
 
 // ============================================
-// CARREGAR LUCRO REAL
+// CARREGAR LUCRO REAL E CUSTO FIXO
 // ============================================
 async function loadLucroReal() {
     if (currentFetchController) currentFetchController.abort();
@@ -149,6 +151,9 @@ async function loadLucroReal() {
         updateConnectionStatus();
         lastDataHash = JSON.stringify(lucroData.map(r => r.id));
         currentFetchController = null;
+
+        // Carrega o custo fixo do mês
+        await loadCustoFixoMensal(mes, ano);
         updateDisplay();
     } catch (error) {
         if (error.name === 'AbortError') return;
@@ -156,6 +161,62 @@ async function loadLucroReal() {
         updateConnectionStatus();
         setTimeout(() => loadLucroReal(), 5000);
     }
+}
+
+// Carregar custo fixo do mês
+async function loadCustoFixoMensal(mes, ano) {
+    try {
+        const response = await fetch(`${API_URL}/custo-fixo?mes=${mes}&ano=${ano}`, {
+            headers: { 'X-Session-Token': sessionToken }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            custoFixoMensal = data.valor || 0;
+        } else {
+            custoFixoMensal = 0;
+        }
+    } catch (error) {
+        console.warn('Erro ao carregar custo fixo', error);
+        custoFixoMensal = 0;
+    }
+}
+
+// Salvar custo fixo
+async function saveCustoFixo() {
+    const valor = parseFloat(document.getElementById('custoFixoInput').value) || 0;
+    const mes = currentMonth.getMonth();
+    const ano = currentMonth.getFullYear();
+
+    try {
+        const response = await fetch(`${API_URL}/custo-fixo`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-Token': sessionToken
+            },
+            body: JSON.stringify({ mes, ano, valor })
+        });
+        if (response.ok) {
+            custoFixoMensal = valor;
+            updateDashboard();
+            closeCustoFixoModal();
+            showMessage('CUSTO FIXO ATUALIZADO', 'success');
+        } else {
+            throw new Error('Erro ao salvar');
+        }
+    } catch (error) {
+        showMessage('ERRO AO SALVAR', 'error');
+    }
+}
+
+// Abrir modal de custo fixo
+function abrirModalCustoFixo() {
+    document.getElementById('custoFixoInput').value = custoFixoMensal;
+    document.getElementById('editCustoFixoModal').classList.add('show');
+}
+
+function closeCustoFixoModal() {
+    document.getElementById('editCustoFixoModal').classList.remove('show');
 }
 
 // ============================================
@@ -168,7 +229,7 @@ function changeMonth(direction) {
     lastDataHash = '';
     updateMonthDisplay();
     updateTable();
-    loadLucroReal();
+    loadLucroReal(); // já chama loadCustoFixoMensal internamente
 }
 
 function updateMonthDisplay() {
@@ -191,7 +252,7 @@ function updateDisplay() {
 
 function updateDashboard() {
     let totalVenda = 0, totalCusto = 0, totalFrete = 0, totalComissao = 0, totalImposto = 0;
-    let totalLucroReal = 0;
+    let totalLucroBruto = 0; // Soma do lucro de cada venda (LUCRO BRUTO)
 
     lucroData.forEach(r => {
         totalVenda += r.venda || 0;
@@ -200,47 +261,50 @@ function updateDashboard() {
         totalComissao += r.comissao || 0;
         totalImposto += r.imposto_federal || 0;
 
-        const lucroReal = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
-        totalLucroReal += lucroReal;
+        const lucro = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
+        totalLucroBruto += lucro;
     });
 
-    // Atualiza os cards
+    // Atualiza cards fixos
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
     document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700;">${formatarMoeda(totalCusto)}</span>`;
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
     document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);
     document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
 
-    // LUCRO REAL (sempre amarelo)
+    // LUCRO BRUTO (soma dos lucros) - sempre amarelo
+    const lucroBrutoElement = document.getElementById('totalLucroBruto');
+    lucroBrutoElement.innerHTML = formatarMoeda(totalLucroBruto);
+    lucroBrutoElement.className = 'stat-value stat-value-warning';
+
+    // LUCRO REAL (custo fixo mensal) - dinâmico
     const lucroRealElement = document.getElementById('totalLucroReal');
-    lucroRealElement.innerHTML = formatarMoeda(totalLucroReal);
-    lucroRealElement.className = 'stat-value stat-value-warning'; // classe para amarelo
+    const iconLucroReal = document.getElementById('iconLucroReal');
 
-    // LUCRO BRUTO = totalLucroReal - totalCusto
-    const lucroBruto = totalLucroReal - totalCusto;
-    const lbElement = document.getElementById('totalLucroBruto');
-    lbElement.innerHTML = formatarMoeda(lucroBruto);
-    lbElement.className = 'stat-value'; // remove classes anteriores
-    if (lucroBruto > 0) {
-        lbElement.classList.add('stat-value-success'); // verde
-    } else if (lucroBruto < 0) {
-        lbElement.classList.add('stat-value-danger'); // vermelho
-    } else {
-        lbElement.style.color = ''; // cor padrão
-    }
-}
+    let valorExibido = custoFixoMensal;
+    let sinal = '';
+    let corClasse = '';
+    let iconClasse = '';
 
-// Ajusta ícone do LUCRO BRUTO conforme o valor
-const lbIcon = document.querySelector('#cardLucroBruto .stat-icon');
-if (lbIcon) {
-    lbIcon.className = 'stat-icon'; // remove classes anteriores
-    if (lucroBruto > 0) {
-        lbIcon.classList.add('stat-icon-success');
-    } else if (lucroBruto < 0) {
-        lbIcon.classList.add('stat-icon-danger');
+    if (totalLucroBruto >= custoFixoMensal) {
+        // Positivo: sem sinal, verde
+        sinal = '';
+        corClasse = 'stat-value-success';
+        iconClasse = 'stat-icon-success';
     } else {
-        lbIcon.classList.add('stat-icon-default');
+        // Negativo: com sinal de menos, vermelho
+        sinal = '-';
+        corClasse = 'stat-value-danger';
+        iconClasse = 'stat-icon-danger';
     }
+
+    // Formata o número sem o "R$" para podermos adicionar o sinal manualmente
+    const valorFormatado = formatarMoeda(custoFixoMensal).replace('R$ ', '');
+    lucroRealElement.innerHTML = sinal + valorFormatado;
+    lucroRealElement.className = `stat-value ${corClasse}`;
+
+    // Ajusta ícone
+    iconLucroReal.className = `stat-icon ${iconClasse}`;
 }
 
 function updateVendedoresFilter() {
@@ -298,7 +362,8 @@ function updateTable() {
         const mesAno = `${data.getMonth()+1}/${data.getFullYear()}`;
         if (mesAno !== lastMonthYear) {
             if (lastMonthYear !== null) {
-                const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
                 const nomeMes = monthNames[data.getMonth()];
                 html += `<tr class="month-separator"><td colspan="9" style="background: var(--th-bg); color: var(--th-color); font-weight: bold; padding: 8px; text-align: center;">${nomeMes} ${data.getFullYear()}</td></tr>`;
             }
@@ -347,10 +412,9 @@ function showMessage(message, type = 'success') {
 }
 
 // ============================================
-// MODAL DE EDIÇÃO (um clique + tecla Enter)
+// MODAL DE EDIÇÃO (CUSTO, COMISSÃO, IMPOSTO)
 // ============================================
 let currentEditCodigo = null;
-let enterListenersAttached = false;
 
 function abrirEditModal(codigo) {
     const registro = lucroData.find(r => r.codigo === codigo);
@@ -377,13 +441,12 @@ function abrirEditModal(codigo) {
 
 function handleEnterKey(event) {
     if (event.key === 'Enter') {
-        event.preventDefault(); // Evita comportamento padrão (como submeter formulário)
+        event.preventDefault();
         saveEditModal();
     }
 }
 
 function closeEditModal() {
-    // Remove listeners de tecla Enter
     const inputs = ['editCusto', 'editComissao', 'editImposto'];
     inputs.forEach(id => {
         const input = document.getElementById(id);
