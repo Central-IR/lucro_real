@@ -230,6 +230,19 @@ function updateDashboard() {
     }
 }
 
+// Ajusta ícone do LUCRO BRUTO conforme o valor
+const lbIcon = document.querySelector('#cardLucroBruto .stat-icon');
+if (lbIcon) {
+    lbIcon.className = 'stat-icon'; // remove classes anteriores
+    if (lucroBruto > 0) {
+        lbIcon.classList.add('stat-icon-success');
+    } else if (lucroBruto < 0) {
+        lbIcon.classList.add('stat-icon-danger');
+    } else {
+        lbIcon.classList.add('stat-icon-default');
+    }
+}
+
 function updateVendedoresFilter() {
     const vendedores = new Set(lucroData.map(r => r.vendedor).filter(Boolean));
     const select = document.getElementById('filterVendedor');
