@@ -19,103 +19,103 @@
                 </div>
             </div>
 
+            <!-- DASHBOARD CARDS -->
             <div class="dashboard-grid">
-    <!-- VENDA -->
-    <div class="stat-card">
-        <div class="stat-icon stat-icon-success">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-        </div>
-        <div class="stat-content">
-            <div class="stat-value" id="totalVenda">R$ 0,00</div>
-            <div class="stat-label">VENDA</div>
-        </div>
-    </div>
+                <!-- VENDA -->
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-success">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalVenda">R$ 0,00</div>
+                        <div class="stat-label">VENDA</div>
+                    </div>
+                </div>
 
-    <!-- CUSTO -->
-    <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 7h16M4 12h16M4 17h10" />
-            </svg>
-        </div>
-        <div class="stat-content">
-            <div class="stat-value" style="color: #EF4444; font-weight: 700;" id="totalCusto">R$ 0,00</div>
-            <div class="stat-label">CUSTO</div>
-        </div>
-    </div>
+                <!-- CUSTO -->
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 7h16M4 12h16M4 17h10" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" style="color: #EF4444; font-weight: 700;" id="totalCusto">R$ 0,00</div>
+                        <div class="stat-label">CUSTO</div>
+                    </div>
+                </div>
 
-    <!-- FRETE -->
-    <div class="stat-card">
-        <div class="stat-icon stat-icon-info">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-            </svg>
-        </div>
-        <div class="stat-content">
-            <div class="stat-value" style="color: #3B82F6; font-weight: 700;" id="totalFrete">R$ 0,00</div>
-            <div class="stat-label">FRETE</div>
-        </div>
-    </div>
+                <!-- FRETE -->
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-info">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" style="color: #3B82F6; font-weight: 700;" id="totalFrete">R$ 0,00</div>
+                        <div class="stat-label">FRETE</div>
+                    </div>
+                </div>
 
-    <!-- IMP FED -->
-    <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 10h18M3 14h18" />
-            </svg>
-        </div>
-        <div class="stat-content">
-            <div class="stat-value" style="color: #EF4444;" id="totalImposto">R$ 0,00</div>
-            <div class="stat-label">IMP FED</div>
-        </div>
-    </div>
+                <!-- IMP FED -->
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" style="color: #EF4444;" id="totalImposto">R$ 0,00</div>
+                        <div class="stat-label">IMP FED</div>
+                    </div>
+                </div>
 
-    <!-- LUCRO REAL (NOVO) -->
-<!-- LUCRO REAL -->
-<div class="stat-card">
-    <div class="stat-icon stat-icon-warning">   <!-- Antes: stat-icon-success -->
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-        </svg>
-    </div>
-    <div class="stat-content">
-        <div class="stat-value" id="totalLucroReal">R$ 0,00</div>
-        <div class="stat-label">LUCRO REAL</div>
-    </div>
-</div>
+                <!-- LUCRO BRUTO (soma dos lucros das vendas) -->
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-warning">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
+                        <div class="stat-label">LUCRO BRUTO</div>
+                    </div>
+                </div>
 
-    <!-- COMISSÃO (REINSERIDO) -->
-    <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(107, 114, 128, 0.1); color: var(--text-secondary);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-            </svg>
-        </div>
-        <div class="stat-content">
-            <div class="stat-value" id="totalComissao">R$ 0,00</div>
-            <div class="stat-label">COMISSÃO</div>
-        </div>
-    </div>
+                <!-- COMISSÃO -->
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(107, 114, 128, 0.1); color: var(--text-secondary);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalComissao">R$ 0,00</div>
+                        <div class="stat-label">COMISSÃO</div>
+                    </div>
+                </div>
 
-    <!-- LUCRO BRUTO (MÊS) -->
-    <div class="stat-card" id="cardLucroBruto">
-        <div class="stat-icon stat-icon-default">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-        </div>
-        <div class="stat-content">
-            <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
-            <div class="stat-label">LUCRO BRUTO (MÊS)</div>
-        </div>
-    </div>
-</div>
+                <!-- LUCRO REAL (custo fixo mensal - editável) -->
+                <div class="stat-card" id="cardLucroReal" style="cursor: pointer;" onclick="abrirModalCustoFixo()">
+                    <div class="stat-icon" id="iconLucroReal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalLucroReal">R$ 0,00</div>
+                        <div class="stat-label">LUCRO REAL</div>
+                    </div>
+                </div>
+            </div>
 
-            <!-- Search Bar with Filters (igual) -->
+            <!-- SEARCH BAR -->
             <div class="search-bar-wrapper">
                 <div class="search-bar">
                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -174,7 +174,7 @@
                 </div>
             </div>
 
-            <!-- Calendar Modal -->
+            <!-- CALENDAR MODAL -->
             <div class="calendar-modal" id="calendarModal">
                 <div class="calendar-content">
                     <div class="calendar-header">
@@ -194,7 +194,7 @@
                 </div>
             </div>
 
-            <!-- Table Card -->
+            <!-- TABLE CARD -->
             <div class="card table-card">
                 <div style="overflow-x: auto;">
                     <table>
@@ -218,7 +218,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO -->
+    <!-- MODAL DE EDIÇÃO (CUSTO, COMISSÃO, IMPOSTO) -->
     <div class="modal-overlay" id="editModal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
@@ -242,6 +242,26 @@
             <div class="modal-actions">
                 <button type="button" onclick="closeEditModal()" class="secondary">CANCELAR</button>
                 <button type="button" onclick="saveEditModal()" class="btn-save-green">SALVAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CUSTO FIXO MENSAL (LUCRO REAL) -->
+    <div class="modal-overlay" id="editCustoFixoModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">EDITAR CUSTO FIXO MENSAL</h3>
+                <button class="close-modal" onclick="closeCustoFixoModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="custoFixoInput">VALOR (R$)</label>
+                    <input type="number" id="custoFixoInput" step="0.01" min="0" value="0">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeCustoFixoModal()" class="secondary">CANCELAR</button>
+                <button type="button" onclick="saveCustoFixo()" class="btn-save-green">SALVAR</button>
             </div>
         </div>
     </div>
