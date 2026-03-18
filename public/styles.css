@@ -438,9 +438,15 @@ h1 {
 /* DASHBOARD GRID */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(4, 1fr); /* 4 cards por linha em telas grandes */
     gap: 1rem;
     margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 cards por linha em mobile */
+    }
 }
 
 .stat-card {
