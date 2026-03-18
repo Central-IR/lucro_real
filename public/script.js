@@ -191,6 +191,7 @@ function updateDisplay() {
 
 function updateDashboard() {
     let totalVenda = 0, totalCusto = 0, totalFrete = 0, totalComissao = 0, totalImposto = 0;
+    let totalLucroReal = 0;
 
     lucroData.forEach(r => {
         totalVenda += r.venda || 0;
@@ -198,12 +199,17 @@ function updateDashboard() {
         totalFrete += r.frete || 0;
         totalComissao += r.comissao || 0;
         totalImposto += r.imposto_federal || 0;
+
+        const lucroReal = (r.venda || 0) - (r.custo || 0) - (r.frete || 0) - (r.comissao || 0) - (r.imposto_federal || 0);
+        totalLucroReal += lucroReal;
     });
 
     document.getElementById('totalVenda').innerHTML = `<span class="stat-value-success">${formatarMoeda(totalVenda)}</span>`;
     document.getElementById('totalCusto').innerHTML = `<span style="color: #EF4444; font-weight: 700;">${formatarMoeda(totalCusto)}</span>`;
     document.getElementById('totalFrete').innerHTML = `<span style="color: #3B82F6; font-weight: 700;">${formatarMoeda(totalFrete)}</span>`;
+    document.getElementById('totalComissao').innerHTML = formatarMoeda(totalComissao);  // novo
     document.getElementById('totalImposto').innerHTML = `<span style="color: #EF4444;">${formatarMoeda(totalImposto)}</span>`;
+    document.getElementById('totalLucroReal').innerHTML = formatarMoeda(totalLucroReal); // novo
 
     const lucroBruto = totalVenda - totalCusto;
     const lbElement = document.getElementById('totalLucroBruto');
