@@ -19,99 +19,100 @@
                 </div>
             </div>
 
-            <!-- Dashboard Cards (comissão removida) -->
             <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-success">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="totalVenda">R$ 0,00</div>
-                        <div class="stat-label">VENDA</div>
-                    </div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 7h16M4 12h16M4 17h10" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" style="color: #EF4444; font-weight: 700;" id="totalCusto">R$ 0,00</div>
-                        <div class="stat-label">CUSTO</div>
-                    </div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-info">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M12 6v6l4 2" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" style="color: #3B82F6; font-weight: 700;" id="totalFrete">R$ 0,00</div>
-                        <div class="stat-label">FRETE</div>
-                    </div>
-                </div>
-                
-                <!-- Card de COMISSÃO removido -->
-                
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 10h18M3 14h18" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" style="color: #EF4444;" id="totalImposto">R$ 0,00</div>
-                        <div class="stat-label">IMP FED</div>
-                    </div>
-                </div>
-
-                <!-- Card de LUCRO REAL -->
-<div class="stat-card">
-    <div class="stat-icon stat-icon-success">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-        </svg>
+    <!-- VENDA -->
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-success">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalVenda">R$ 0,00</div>
+            <div class="stat-label">VENDA</div>
+        </div>
     </div>
-    <div class="stat-content">
-        <div class="stat-value" id="totalLucroReal">R$ 0,00</div>
-        <div class="stat-label">LUCRO REAL</div>
+
+    <!-- CUSTO -->
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 7h16M4 12h16M4 17h10" />
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" style="color: #EF4444; font-weight: 700;" id="totalCusto">R$ 0,00</div>
+            <div class="stat-label">CUSTO</div>
+        </div>
+    </div>
+
+    <!-- FRETE -->
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-info">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" style="color: #3B82F6; font-weight: 700;" id="totalFrete">R$ 0,00</div>
+            <div class="stat-label">FRETE</div>
+        </div>
+    </div>
+
+    <!-- IMP FED -->
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 10h18M3 14h18" />
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" style="color: #EF4444;" id="totalImposto">R$ 0,00</div>
+            <div class="stat-label">IMP FED</div>
+        </div>
+    </div>
+
+    <!-- LUCRO REAL (NOVO) -->
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-success">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalLucroReal">R$ 0,00</div>
+            <div class="stat-label">LUCRO REAL</div>
+        </div>
+    </div>
+
+    <!-- COMISSÃO (REINSERIDO) -->
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(107, 114, 128, 0.1); color: var(--text-secondary);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalComissao">R$ 0,00</div>
+            <div class="stat-label">COMISSÃO</div>
+        </div>
+    </div>
+
+    <!-- LUCRO BRUTO (MÊS) -->
+    <div class="stat-card" id="cardLucroBruto">
+        <div class="stat-icon stat-icon-default">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
+            <div class="stat-label">LUCRO BRUTO (MÊS)</div>
+        </div>
     </div>
 </div>
-
-<!-- Card de COMISSÃO (reinserido) -->
-<div class="stat-card">
-    <div class="stat-icon" style="background: rgba(107, 114, 128, 0.1); color: var(--text-secondary);">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v6l4 2" />
-        </svg>
-    </div>
-    <div class="stat-content">
-        <div class="stat-value" id="totalComissao">R$ 0,00</div>
-        <div class="stat-label">COMISSÃO</div>
-    </div>
-</div>
-
-                <!-- Lucro Bruto do Mês -->
-                <div class="stat-card" id="cardLucroBruto">
-                    <div class="stat-icon stat-icon-default">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                        </svg>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="totalLucroBruto">R$ 0,00</div>
-                        <div class="stat-label">LUCRO BRUTO (MÊS)</div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Search Bar with Filters (igual) -->
             <div class="search-bar-wrapper">
